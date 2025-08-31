@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/worklog_db
+    username: worklog
+    password: worklog2025
+
+  jpa:
+    show-sql: true
+
+  flyway:
+    enabled: true
