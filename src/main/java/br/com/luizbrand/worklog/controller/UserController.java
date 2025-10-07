@@ -30,7 +30,7 @@ public class UserController {
         return ResponseEntity.ok(userService.findByPublicId(publicId));
     }
 
-    @DeleteMapping("/{publicId}")
+    @PostMapping("/{publicId}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deactiveUserByPublicId(@PathVariable UUID publicId) {
         userService.deactiveUser(publicId);

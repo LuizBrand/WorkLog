@@ -1,7 +1,7 @@
 package br.com.luizbrand.worklog.controller;
 
 import br.com.luizbrand.worklog.dto.request.RegisterRequest;
-import br.com.luizbrand.worklog.dto.response.RegisterResponse;
+import br.com.luizbrand.worklog.dto.response.AuthResponse;
 import br.com.luizbrand.worklog.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -22,8 +22,8 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponse> register(@RequestBody @Valid RegisterRequest request) {
-        RegisterResponse response = authService.register(request);
+    public ResponseEntity<AuthResponse> register(@RequestBody @Valid RegisterRequest request) {
+        AuthResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

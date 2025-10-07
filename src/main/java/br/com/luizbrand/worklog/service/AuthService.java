@@ -1,7 +1,7 @@
 package br.com.luizbrand.worklog.service;
 
 import br.com.luizbrand.worklog.dto.request.RegisterRequest;
-import br.com.luizbrand.worklog.dto.response.RegisterResponse;
+import br.com.luizbrand.worklog.dto.response.AuthResponse;
 import br.com.luizbrand.worklog.entity.Role;
 import br.com.luizbrand.worklog.entity.User;
 import br.com.luizbrand.worklog.enums.RoleName;
@@ -36,7 +36,7 @@ public class AuthService {
     }
 
     @Transactional
-    public RegisterResponse register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request) {
 
         Optional<User> userEmail = userRepository.findByEmail(request.email());
         if(userEmail.isPresent()) {
@@ -51,7 +51,7 @@ public class AuthService {
         user.setRoles(Set.of(userRole));
 
         User savedUser = userRepository.save(user);
-        return userMapper.toRegisterResponse(savedUser);
+        return userMapper.toAuthResponse(savedUser);
 
     }
 

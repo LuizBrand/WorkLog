@@ -1,7 +1,7 @@
 package br.com.luizbrand.worklog.mapper;
 
 import br.com.luizbrand.worklog.dto.request.RegisterRequest;
-import br.com.luizbrand.worklog.dto.response.RegisterResponse;
+import br.com.luizbrand.worklog.dto.response.AuthResponse;
 import br.com.luizbrand.worklog.dto.response.UserResponse;
 import br.com.luizbrand.worklog.entity.User;
 import org.mapstruct.Mapper;
@@ -10,7 +10,7 @@ import org.mapstruct.Mapper;
 public interface UserMapper {
 
     User toUser(RegisterRequest userRequest);
-    RegisterResponse toRegisterResponse(User user);
+    AuthResponse toAuthResponse(User user);
     UserResponse toUserResponse(User user);
 
 }

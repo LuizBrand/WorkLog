@@ -1,20 +1,19 @@
 package br.com.luizbrand.worklog.mapper;
 
 import br.com.luizbrand.worklog.dto.request.RegisterRequest;
-import br.com.luizbrand.worklog.dto.response.RegisterResponse;
+import br.com.luizbrand.worklog.dto.response.AuthResponse;
 import br.com.luizbrand.worklog.dto.response.RoleResponse;
 import br.com.luizbrand.worklog.dto.response.UserResponse;
 import br.com.luizbrand.worklog.entity.Role;
 import br.com.luizbrand.worklog.entity.User;
 import br.com.luizbrand.worklog.enums.RoleName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
@@ -35,6 +34,16 @@ class UserMapperTest {
     @InjectMocks
     private UserMapper userMapper = Mappers.getMapper(UserMapper.class);
 
+    private LocalDateTime createdDate;
+    private String expectedDateString;
+
+    @BeforeEach
+    void setUp() {
+        createdDate = LocalDateTime.of(2025, 9, 27, 10, 30, 00);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        expectedDateString = createdDate.format(formatter);
+    }
+
     @Test
     void shouldMapRegisterRequestToUser() {
         //ARRANGE
@@ -52,9 +61,8 @@ class UserMapperTest {
     }
 
     @Test
-    void shouldMapUserToRegisterResponse() {
+    void shouldMapUserToAuthResponse() {
         //ARRANGE
-        LocalDateTime createdDate = LocalDateTime.of(2025, 9, 27, 10, 30, 00);
         String uuid = "0abcfc81-9411-40a6-8cbc-d3f690da4ef0";
         UUID publicId = UUID.fromString(uuid);
 
@@ -65,17 +73,14 @@ class UserMapperTest {
         user.setCreatedAt(createdDate);
 
         //ACT
-        RegisterResponse userResponse = userMapper.toRegisterResponse(user);
+        AuthResponse authResponse = userMapper.toAuthResponse(user);
 
         //ASSERT
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-        String expectedDateString = createdDate.format(formatter);
-
-        assertNotNull(userResponse);
-        assertEquals("username", userResponse.name());
-        assertEquals("user@gmail.com", userResponse.email());
-        assertEquals(user.getPublicId().toString(),  userResponse.publicId());
-        assertEquals(expectedDateString, userResponse.createdAt());
+        assertNotNull(authResponse);
+        assertEquals("username", authResponse.name());
+        assertEquals("user@gmail.com", authResponse.email());
+        assertEquals(user.getPublicId().toString(),  authResponse.publicId());
+        assertEquals(expectedDateString, authResponse.createdAt());
 
     }
 
@@ -92,6 +97,7 @@ class UserMapperTest {
         user.setName("username");
         user.setEmail("user@gmail.com");
         user.setRoles(Set.of(userRole));
+        user.setCreatedAt(createdDate);
 
         RoleResponse roleResponse = new RoleResponse(RoleName.USER);
         when(roleMapper.toRoleResponse(userRole)).thenReturn(roleResponse);
@@ -100,10 +106,12 @@ class UserMapperTest {
         UserResponse userResponse = userMapper.toUserResponse(user);
 
         //ASSERT
+
         assertNotNull(userResponse);
         assertEquals(user.getPublicId().toString(), userResponse.publicId());
         assertEquals(user.getName(), userResponse.name());
         assertEquals(user.getEmail(), userResponse.email());
+        assertEquals(expectedDateString, userResponse.createdAt());
         assertTrue(userResponse.roles().contains(roleResponse));
 
         verify(roleMapper, times(1)).toRoleResponse(userRole);
