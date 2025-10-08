@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS customer_product;
+DROP TABLE IF EXISTS customer;
+DROP TABLE IF EXISTS product;
