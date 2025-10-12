@@ -28,7 +28,7 @@ public class Client {
     private String name;
 
     @Column(name = "is_enabled", nullable = false)
-    private boolean isCustomerEnabled;
+    private boolean isClientEnabled;
 
     @CreationTimestamp
     @Column(name = "created_at")
@@ -44,6 +44,13 @@ public class Client {
             joinColumns = @JoinColumn(name = "client_id"),
             inverseJoinColumns = @JoinColumn(name = "system_id")
     )
-    private List<System> systems;
+    private List<Systems> systems;
+
+    @PrePersist
+    public void generatePublicId() {
+        if (this.publicId == null) {
+            this.publicId = UUID.randomUUID();
+        }
+    }
 
 }

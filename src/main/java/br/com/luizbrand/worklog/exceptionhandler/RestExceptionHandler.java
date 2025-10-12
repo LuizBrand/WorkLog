@@ -1,6 +1,8 @@
 package br.com.luizbrand.worklog.exceptionhandler;
 
+import br.com.luizbrand.worklog.exception.ClientAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.EmailAlreadyExistsException;
+import br.com.luizbrand.worklog.exception.SystemAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -66,5 +68,31 @@ public class RestExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(exceptionResponse, HttpStatus.NOT_FOUND);
+    }
+    @ExceptionHandler(SystemAlreadyExistsException.class)
+    public ResponseEntity<ApiExceptionResponse> handleSystemAlreadyExists(SystemAlreadyExistsException ex, WebRequest request) {
+
+        ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("Conflict")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return new ResponseEntity<>(exceptionResponse, HttpStatus.CONFLICT);
+    }
+    @ExceptionHandler(ClientAlreadyExistsException.class)
+    public ResponseEntity<ApiExceptionResponse> handleClientAlreadyExists(ClientAlreadyExistsException ex, WebRequest request) {
+
+        ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("Conflict")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return new ResponseEntity<>(exceptionResponse, HttpStatus.CONFLICT);
     }
 }

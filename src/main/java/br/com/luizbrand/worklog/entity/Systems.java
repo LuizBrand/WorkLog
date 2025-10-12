@@ -14,7 +14,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity(name = "systems")
-public class System {
+public class Systems {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,5 +39,12 @@ public class System {
 
     @ManyToMany(mappedBy = "systems")
     private List<Client> clients;
+
+    @PrePersist
+    public void generatePublicId() {
+        if (this.publicId == null) {
+            this.publicId = UUID.randomUUID();
+        }
+    }
 
 }

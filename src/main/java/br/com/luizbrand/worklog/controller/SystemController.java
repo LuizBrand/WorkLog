@@ -1,9 +1,36 @@
 package br.com.luizbrand.worklog.controller;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import br.com.luizbrand.worklog.dto.request.SystemRequest;
+import br.com.luizbrand.worklog.dto.response.SystemResponse;
+import br.com.luizbrand.worklog.service.SystemService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/systems")
 public class SystemController {
+
+    private final SystemService systemService;
+
+    public SystemController(SystemService systemService) {
+        this.systemService = systemService;
+    }
+
+    @GetMapping
+    public ResponseEntity<SystemResponse> findSystemByPublicId(@RequestParam UUID publicId) {
+        return ResponseEntity.ok(systemService.getSystemByPublicId(publicId));
+
+    }
+
+    @PostMapping("/")
+    public ResponseEntity<SystemResponse> saveSystem(@RequestBody @Valid SystemRequest systemRequest) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(systemService.createSystem(systemRequest));
+    }
+
+
+
 }
