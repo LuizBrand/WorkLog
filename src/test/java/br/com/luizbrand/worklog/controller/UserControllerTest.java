@@ -3,7 +3,7 @@ package br.com.luizbrand.worklog.controller;
 import br.com.luizbrand.worklog.dto.response.RoleResponse;
 import br.com.luizbrand.worklog.dto.response.UserResponse;
 import br.com.luizbrand.worklog.enums.RoleName;
-import br.com.luizbrand.worklog.exception.UserNotFoundException;
+import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
 import br.com.luizbrand.worklog.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 

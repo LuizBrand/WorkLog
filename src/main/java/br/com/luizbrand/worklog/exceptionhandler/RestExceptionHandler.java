@@ -1,9 +1,7 @@
 package br.com.luizbrand.worklog.exceptionhandler;
 
-import br.com.luizbrand.worklog.exception.ClientAlreadyExistsException;
-import br.com.luizbrand.worklog.exception.EmailAlreadyExistsException;
-import br.com.luizbrand.worklog.exception.SystemAlreadyExistsException;
-import br.com.luizbrand.worklog.exception.UserNotFoundException;
+import br.com.luizbrand.worklog.exception.Conflict.ResourceAlreadyExistsException;
+import br.com.luizbrand.worklog.exception.NotFound.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -19,8 +17,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class RestExceptionHandler {
 
-    @ExceptionHandler(EmailAlreadyExistsException.class)
-    public ResponseEntity<ApiExceptionResponse> handleEmailAlreadyExists(EmailAlreadyExistsException ex, WebRequest request) {
+    @ExceptionHandler(ResourceAlreadyExistsException.class)
+    public ResponseEntity<ApiExceptionResponse> handleEmailAlreadyExists(ResourceAlreadyExistsException ex, WebRequest request) {
 
         ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -32,6 +30,21 @@ public class RestExceptionHandler {
 
         return new ResponseEntity<>(exceptionResponse, HttpStatus.CONFLICT);
     }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiExceptionResponse> handleUserNotFound(ResourceNotFoundException ex, WebRequest request) {
+
+        ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Not Found")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return new ResponseEntity<>(exceptionResponse, HttpStatus.NOT_FOUND);
+    }
+
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiExceptionResponse> handleValidationExceptions(MethodArgumentNotValidException ex, WebRequest request) {
@@ -54,45 +67,5 @@ public class RestExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(exceptionResponse, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ApiExceptionResponse> handleUserNotFound(UserNotFoundException ex, WebRequest request) {
-
-        ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.NOT_FOUND.value())
-                .error("Not Found")
-                .message(ex.getMessage())
-                .path(request.getDescription(false).replace("uri=", ""))
-                .build();
-
-        return new ResponseEntity<>(exceptionResponse, HttpStatus.NOT_FOUND);
-    }
-    @ExceptionHandler(SystemAlreadyExistsException.class)
-    public ResponseEntity<ApiExceptionResponse> handleSystemAlreadyExists(SystemAlreadyExistsException ex, WebRequest request) {
-
-        ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
-                .message(ex.getMessage())
-                .path(request.getDescription(false).replace("uri=", ""))
-                .build();
-
-        return new ResponseEntity<>(exceptionResponse, HttpStatus.CONFLICT);
-    }
-    @ExceptionHandler(ClientAlreadyExistsException.class)
-    public ResponseEntity<ApiExceptionResponse> handleClientAlreadyExists(ClientAlreadyExistsException ex, WebRequest request) {
-
-        ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
-                .message(ex.getMessage())
-                .path(request.getDescription(false).replace("uri=", ""))
-                .build();
-
-        return new ResponseEntity<>(exceptionResponse, HttpStatus.CONFLICT);
     }
 }

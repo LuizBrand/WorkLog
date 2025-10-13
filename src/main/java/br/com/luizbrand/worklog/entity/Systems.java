@@ -27,7 +27,7 @@ public class Systems {
     private String name;
 
     @Column(name = "is_active", nullable = false)
-    private boolean isProductEnabled;
+    private boolean enabled = true;
 
     @CreationTimestamp
     @Column(name = "created_at")

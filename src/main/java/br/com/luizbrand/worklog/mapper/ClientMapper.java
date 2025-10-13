@@ -32,14 +32,14 @@ public abstract class ClientMapper {
             @Mapping(target = "publicId", ignore = true),// Ignora, será gerado pelo @PrePersist
             @Mapping(target = "createdAt", ignore = true), // Ignora, será gerado pelo @CreationTimestamp
             @Mapping(target = "updatedAt", ignore = true), // Ignora, será gerado pelo @UpdateTimestamp
-            @Mapping(target = "isClientEnabled", constant = "true"), // Define um valor padrão "true" para novos clientes
-            @Mapping(source = "systemsPublicIds", target = "systems", qualifiedByName = "publicIdsToSystems")
+            @Mapping(target = "enabled", constant = "true"), // Define um valor padrão "true" para novos clientes
+            @Mapping(target = "systems", source = "systems")
     })
-    public abstract Client toClient(ClientRequest clientRequest);
+    public abstract Client toClient(ClientRequest clientRequest, List<Systems> systems);
     public abstract ClientResponse toClientResponse(Client client);
 
 
-    @Named("publicIdsToSystems")
+/*    @Named("publicIdsToSystems")
     protected List<Systems> publicIdsToSystems(List<UUID> publicIds) {
         if (publicIds == null || publicIds.isEmpty()) {
             return java.util.Collections.emptyList();
@@ -49,21 +49,8 @@ public abstract class ClientMapper {
                 .map(pid -> systemRepository.findByPublicId(pid)
                         .orElseThrow(() -> new RuntimeException("System not found with publicId: " + pid)))
                 .collect(Collectors.toList());
-    }
-
-    /*    @Named("mapSystemIdToSystemsList")
-    protected List<Systems> mapSystemIdToSystemsList(List<UUID> publicIds) {
-        if (publicIds == null || publicIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return publicIds.stream()
-                .map(publicId -> {
-                    SystemResponse systemDTO = systemService.getSystemByPublicId(publicId);
-                    return systemMapper.toSystem(systemDTO);
-                }).collect(Collectors.toList());
-
     }*/
+
     protected OffsetDateTime fromLocalDateTimeToOffsetDateTime(LocalDateTime localDateTime) {
         if (localDateTime == null) {
             return null;

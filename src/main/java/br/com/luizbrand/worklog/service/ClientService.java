@@ -4,25 +4,26 @@ import br.com.luizbrand.worklog.dto.request.ClientRequest;
 import br.com.luizbrand.worklog.dto.response.ClientResponse;
 import br.com.luizbrand.worklog.dto.searchFilters.ClientFiltersParams;
 import br.com.luizbrand.worklog.entity.Client;
-import br.com.luizbrand.worklog.exception.ClientAlreadyExistsException;
+import br.com.luizbrand.worklog.entity.Systems;
+import br.com.luizbrand.worklog.exception.Conflict.ClientAlreadyExistsException;
 import br.com.luizbrand.worklog.mapper.ClientMapper;
 import br.com.luizbrand.worklog.repository.ClientRepository;
 import br.com.luizbrand.worklog.repository.specification.ClientSpecification;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class ClientService {
 
     private final ClientRepository clientRepository;
     private final ClientMapper clientMapper;
+    private final SystemService systemService;
 
-    public ClientService(ClientRepository clientRepository, ClientMapper clientMapper) {
+    public ClientService(ClientRepository clientRepository, ClientMapper clientMapper, SystemService systemService) {
         this.clientRepository = clientRepository;
         this.clientMapper = clientMapper;
+        this.systemService = systemService;
     }
 
     public List<ClientResponse> findAllClients(ClientFiltersParams filtersParams) {
@@ -32,7 +33,6 @@ public class ClientService {
         return clients.stream()
                 .map(clientMapper::toClientResponse)
                 .toList();
-
 
     }
 
@@ -58,7 +58,14 @@ public class ClientService {
                     throw new ClientAlreadyExistsException("Client with name: " + clientRequest.name() + " already exists");
                 });
 
-        Client clientSaved = clientRepository.save(clientMapper.toClient(clientRequest));
+        List<Systems> associatedSystems = new ArrayList<>();
+        List<UUID> systemsPublicIds = clientRequest.systemsPublicIds();
+
+        if (systemsPublicIds != null && !systemsPublicIds.isEmpty()) {
+            associatedSystems = systemService.findAllByPublicIds(systemsPublicIds);
+        }
+
+        Client clientSaved = clientRepository.save(clientMapper.toClient(clientRequest, associatedSystems));
         return clientMapper.toClientResponse(clientSaved);
     }
 }

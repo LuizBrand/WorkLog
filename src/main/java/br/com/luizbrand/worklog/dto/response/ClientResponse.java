@@ -7,7 +7,7 @@ import java.util.UUID;
 public record ClientResponse(
         UUID publicId,
         String name,
-        boolean isClientEnabled,
+        boolean enabled,
         OffsetDateTime createdAt,
         List<SystemResponse> systems) {
 }

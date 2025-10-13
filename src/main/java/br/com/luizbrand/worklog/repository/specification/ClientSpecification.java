@@ -26,10 +26,10 @@ public class ClientSpecification {
             if (filters.status() != null){
                 switch (filters.status()) {
                     case ATIVO:
-                        predicates.add(criteriaBuilder.equal(root.get("isEnabled"), true));
+                        predicates.add(criteriaBuilder.equal(root.get("enabled"), true));
                         break;
                     case INATIVO:
-                        predicates.add(criteriaBuilder.equal(root.get("isEnabled"), false));
+                        predicates.add(criteriaBuilder.equal(root.get("enabled"), false));
                         break;
                     case TODOS:
                         break;

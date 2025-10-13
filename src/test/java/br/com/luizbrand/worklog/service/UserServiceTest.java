@@ -5,7 +5,7 @@ import br.com.luizbrand.worklog.dto.response.UserResponse;
 import br.com.luizbrand.worklog.entity.Role;
 import br.com.luizbrand.worklog.entity.User;
 import br.com.luizbrand.worklog.enums.RoleName;
-import br.com.luizbrand.worklog.exception.UserNotFoundException;
+import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
 import br.com.luizbrand.worklog.mapper.UserMapper;
 import br.com.luizbrand.worklog.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;

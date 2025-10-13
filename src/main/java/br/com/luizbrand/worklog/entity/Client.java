@@ -28,7 +28,7 @@ public class Client {
     private String name;
 
     @Column(name = "is_enabled", nullable = false)
-    private boolean isClientEnabled;
+    private boolean enabled;
 
     @CreationTimestamp
     @Column(name = "created_at")

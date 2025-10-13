@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -20,8 +21,13 @@ public class SystemController {
         this.systemService = systemService;
     }
 
-    @GetMapping
-    public ResponseEntity<SystemResponse> findSystemByPublicId(@RequestParam UUID publicId) {
+    @GetMapping()
+    public ResponseEntity<List<SystemResponse>> findAllSystems() {
+        return ResponseEntity.ok(systemService.findAllSystems());
+    }
+
+    @GetMapping("/{publicId}")
+    public ResponseEntity<SystemResponse> findSystemByPublicId(@PathVariable UUID publicId) {
         return ResponseEntity.ok(systemService.getSystemByPublicId(publicId));
 
     }

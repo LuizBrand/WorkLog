@@ -11,10 +11,12 @@ public interface SystemMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "publicId", ignore = true)
+    @Mapping(target = "enabled", constant = "true")
+    @Mapping(target = "clients", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     Systems toSystem(SystemRequest systemRequest);
 
-    @Mapping(target = "id", ignore = true)
-    Systems toSystem(SystemResponse systemResponse);
     SystemResponse toSystemResponse(Systems system);
 
 }
