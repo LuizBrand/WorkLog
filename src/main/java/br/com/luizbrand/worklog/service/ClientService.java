@@ -6,10 +6,12 @@ import br.com.luizbrand.worklog.dto.searchFilters.ClientFiltersParams;
 import br.com.luizbrand.worklog.entity.Client;
 import br.com.luizbrand.worklog.entity.Systems;
 import br.com.luizbrand.worklog.exception.Conflict.ClientAlreadyExistsException;
+import br.com.luizbrand.worklog.exception.NotFound.ClientNotFoundException;
 import br.com.luizbrand.worklog.mapper.ClientMapper;
 import br.com.luizbrand.worklog.repository.ClientRepository;
 import br.com.luizbrand.worklog.repository.specification.ClientSpecification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -52,6 +54,7 @@ public class ClientService {
 
     }
 
+    @Transactional
     public ClientResponse createClient(ClientRequest clientRequest) {
         clientRepository.findByName(clientRequest.name())
                 .ifPresent(existingClient -> {
@@ -68,4 +71,29 @@ public class ClientService {
         Client clientSaved = clientRepository.save(clientMapper.toClient(clientRequest, associatedSystems));
         return clientMapper.toClientResponse(clientSaved);
     }
+
+    @Transactional
+    public ClientResponse updateClient(UUID publicId, ClientRequest clientRequest) {
+        Optional<Client> clientOpt = clientRepository.findByPublicId(publicId);
+
+        if (clientOpt.isEmpty()) {
+            throw new ClientNotFoundException("Client with public ID: " + publicId + " not found");
+        }
+
+        Client client = clientOpt.get();
+        List<Systems> associatedSystems = null;
+        List<UUID> systemsPublicIds = clientRequest.systemsPublicIds();
+
+        if (systemsPublicIds != null) {
+            associatedSystems = new ArrayList<>(); // se não veio null, o padrão é uma lista vazia
+            if (!systemsPublicIds.isEmpty()) { // se não estiver vazia, buscar os sistemas pelo id vindo dela
+                associatedSystems = systemService.findAllByPublicIds(systemsPublicIds);
+            }
+        }
+
+        clientMapper.updateClient(clientRequest, associatedSystems, client);
+        Client savedClient = clientRepository.save(client);
+        return clientMapper.toClientResponse(savedClient);
+    }
+
 }

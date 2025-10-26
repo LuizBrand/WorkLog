@@ -37,6 +37,10 @@ public class SystemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(systemService.createSystem(systemRequest));
     }
 
+    @PatchMapping("/{publicId}")
+    public ResponseEntity<SystemResponse> updateSystem(@RequestBody @Valid SystemRequest systemRequest, @PathVariable UUID publicId) {
+        return ResponseEntity.ok(systemService.updateSystem(systemRequest, publicId));
+    }
 
 
 }

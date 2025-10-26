@@ -39,4 +39,9 @@ public class ClientController {
         return ResponseEntity.status(HttpStatus.CREATED).body(clientResponse);
     }
 
+    @PatchMapping("/{publicId}")
+    public ResponseEntity<ClientResponse> updateClient(@RequestBody @Valid ClientRequest clientRequest, @PathVariable UUID publicId) {
+        return ResponseEntity.ok( clientService.updateClient(publicId, clientRequest));
+    }
+
 }

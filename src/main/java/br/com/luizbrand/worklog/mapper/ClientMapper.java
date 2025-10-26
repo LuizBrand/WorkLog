@@ -4,11 +4,7 @@ import br.com.luizbrand.worklog.dto.request.ClientRequest;
 import br.com.luizbrand.worklog.dto.response.ClientResponse;
 import br.com.luizbrand.worklog.entity.Client;
 import br.com.luizbrand.worklog.entity.Systems;
-import br.com.luizbrand.worklog.repository.SystemRepository;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Mappings;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.mapstruct.*;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -28,6 +24,9 @@ public abstract class ClientMapper {
     })
     public abstract Client toClient(ClientRequest clientRequest, List<Systems> systems);
     public abstract ClientResponse toClientResponse(Client client);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    public abstract void updateClient(ClientRequest clientRequest, List<Systems> systems, @MappingTarget Client client);
 
     protected OffsetDateTime fromLocalDateTimeToOffsetDateTime(LocalDateTime localDateTime) {
         if (localDateTime == null) {

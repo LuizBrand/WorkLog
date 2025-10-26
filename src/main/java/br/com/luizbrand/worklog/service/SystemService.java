@@ -7,10 +7,13 @@ import br.com.luizbrand.worklog.exception.Conflict.SystemAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.SystemNotFoundException;
 import br.com.luizbrand.worklog.mapper.SystemMapper;
 import br.com.luizbrand.worklog.repository.SystemRepository;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -52,6 +55,7 @@ public class SystemService {
 
     }
 
+    @Transactional
     public SystemResponse createSystem(SystemRequest systemRequest) {
 
         systemRepository.findByName(systemRequest.name())
@@ -63,15 +67,19 @@ public class SystemService {
         return systemMapper.toSystemResponse(systemSaved);
     }
 
-    //Method to verify if a system already exist, but accept an empty value
-/*    public Optional<SystemResponse>findSystemByPublicId(UUID publicId) {
-        if (publicId == null) {
-            return Optional.empty();
+    @Transactional
+    public SystemResponse updateSystem(SystemRequest systemRequest, UUID publicId) {
+
+        Optional<Systems> optSytem = systemRepository.findByPublicId(publicId);
+
+        if (optSytem.isEmpty()) {
+            throw new SystemNotFoundException("System with public ID: " + publicId + " not found");
         }
-        return systemRepository.findByPublicId(publicId)
-                .map(systemMapper::toSystemResponse);
 
-    }*/
+        Systems system = optSytem.get();
+        systemMapper.updateSystem(systemRequest, system);
+        Systems savedSystem = systemRepository.save(system);
+        return systemMapper.toSystemResponse(savedSystem);
 
-
+    }
 }
