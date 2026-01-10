@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -119,7 +120,7 @@ class ClientMapperTest {
 
             Client client = new Client();
             client.setName("Old Name");
-            client.setSystems(Collections.emptyList());
+            client.setSystems(new ArrayList<>());
 
             clientMapper.updateClient(request, systemsList, client);
 
