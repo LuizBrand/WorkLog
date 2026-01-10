@@ -1,6 +1,7 @@
 package br.com.luizbrand.worklog.user;
 
 import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
+import br.com.luizbrand.worklog.user.dto.UserResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

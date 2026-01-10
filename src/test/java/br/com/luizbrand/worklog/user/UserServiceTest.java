@@ -1,9 +1,10 @@
 package br.com.luizbrand.worklog.user;
 
 import br.com.luizbrand.worklog.role.Role;
-import br.com.luizbrand.worklog.role.RoleResponse;
+import br.com.luizbrand.worklog.role.dto.RoleResponse;
 import br.com.luizbrand.worklog.role.enums.RoleName;
 import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
+import br.com.luizbrand.worklog.user.dto.UserResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

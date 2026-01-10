@@ -1,11 +1,12 @@
 package br.com.luizbrand.worklog.user;
 
-import br.com.luizbrand.worklog.auth.AuthResponse;
-import br.com.luizbrand.worklog.auth.RegisterRequest;
+import br.com.luizbrand.worklog.auth.dto.AuthResponse;
+import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import br.com.luizbrand.worklog.role.Role;
 import br.com.luizbrand.worklog.role.RoleMapper;
-import br.com.luizbrand.worklog.role.RoleResponse;
+import br.com.luizbrand.worklog.role.dto.RoleResponse;
 import br.com.luizbrand.worklog.role.enums.RoleName;
+import br.com.luizbrand.worklog.user.dto.UserResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

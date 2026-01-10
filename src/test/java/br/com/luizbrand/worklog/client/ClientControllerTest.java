@@ -1,8 +1,10 @@
 package br.com.luizbrand.worklog.client;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import br.com.luizbrand.worklog.client.dto.ClientRequest;
+import br.com.luizbrand.worklog.client.dto.ClientResponse;
 import br.com.luizbrand.worklog.exception.NotFound.ClientNotFoundException;
-import br.com.luizbrand.worklog.system.SystemResponse;
+import br.com.luizbrand.worklog.system.dto.SystemResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.http.MediaType;

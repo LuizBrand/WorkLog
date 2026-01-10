@@ -1,4 +1,4 @@
-package br.com.luizbrand.worklog.client;
+package br.com.luizbrand.worklog.client.dto;
 
 import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 

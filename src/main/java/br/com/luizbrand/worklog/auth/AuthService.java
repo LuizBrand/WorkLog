@@ -1,5 +1,7 @@
 package br.com.luizbrand.worklog.auth;
 
+import br.com.luizbrand.worklog.auth.dto.AuthResponse;
+import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import br.com.luizbrand.worklog.role.Role;
 import br.com.luizbrand.worklog.role.enums.RoleName;
 import br.com.luizbrand.worklog.user.User;

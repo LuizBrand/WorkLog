@@ -1,5 +1,8 @@
 package br.com.luizbrand.worklog.client;
 
+import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
+import br.com.luizbrand.worklog.client.dto.ClientRequest;
+import br.com.luizbrand.worklog.client.dto.ClientResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

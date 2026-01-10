@@ -1,4 +1,4 @@
-package br.com.luizbrand.worklog.system;
+package br.com.luizbrand.worklog.system.dto;
 
 import jakarta.validation.constraints.NotBlank;
 

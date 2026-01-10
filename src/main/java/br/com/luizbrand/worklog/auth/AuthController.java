@@ -1,5 +1,7 @@
 package br.com.luizbrand.worklog.auth;
 
+import br.com.luizbrand.worklog.auth.dto.AuthResponse;
+import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

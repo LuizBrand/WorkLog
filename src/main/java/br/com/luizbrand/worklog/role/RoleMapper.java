@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.role;
 
+import br.com.luizbrand.worklog.role.dto.RoleResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

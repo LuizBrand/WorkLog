@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.user;
 
+import br.com.luizbrand.worklog.user.dto.UserResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

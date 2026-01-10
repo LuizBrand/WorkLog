@@ -1,5 +1,7 @@
 package br.com.luizbrand.worklog.system;
 
+import br.com.luizbrand.worklog.system.dto.SystemRequest;
+import br.com.luizbrand.worklog.system.dto.SystemResponse;
 import org.mapstruct.*;
 
 @Mapper(componentModel = "spring")

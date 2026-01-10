@@ -1,6 +1,6 @@
-package br.com.luizbrand.worklog.client;
+package br.com.luizbrand.worklog.client.dto;
 
-import br.com.luizbrand.worklog.system.SystemResponse;
+import br.com.luizbrand.worklog.system.dto.SystemResponse;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package br.com.luizbrand.worklog.auth;
+package br.com.luizbrand.worklog.auth.dto;
 
 import jakarta.validation.constraints.*;
 

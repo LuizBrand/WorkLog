@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.client;
 
+import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
 import br.com.luizbrand.worklog.system.Systems;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;

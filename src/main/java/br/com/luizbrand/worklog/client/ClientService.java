@@ -1,5 +1,8 @@
 package br.com.luizbrand.worklog.client;
 
+import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
+import br.com.luizbrand.worklog.client.dto.ClientRequest;
+import br.com.luizbrand.worklog.client.dto.ClientResponse;
 import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.system.SystemService;
 import br.com.luizbrand.worklog.exception.Conflict.ClientAlreadyExistsException;
