@@ -6,7 +6,7 @@ import br.com.luizbrand.worklog.dto.response.RoleResponse;
 import br.com.luizbrand.worklog.dto.response.UserResponse;
 import br.com.luizbrand.worklog.entity.Role;
 import br.com.luizbrand.worklog.entity.User;
-import br.com.luizbrand.worklog.enums.RoleName;
+import br.com.luizbrand.worklog.role.enums.RoleName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

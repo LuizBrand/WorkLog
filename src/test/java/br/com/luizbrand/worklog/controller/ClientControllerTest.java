@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.http.MediaType;
 import br.com.luizbrand.worklog.dto.response.ClientResponse;
-import br.com.luizbrand.worklog.dto.response.SystemResponse;
 import br.com.luizbrand.worklog.service.ClientService;
 
 import org.junit.jupiter.api.DisplayName;
