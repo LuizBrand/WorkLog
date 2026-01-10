@@ -1,10 +1,8 @@
-package br.com.luizbrand.worklog.controller;
+package br.com.luizbrand.worklog.user;
 
-import br.com.luizbrand.worklog.dto.response.RoleResponse;
-import br.com.luizbrand.worklog.dto.response.UserResponse;
-import br.com.luizbrand.worklog.role.enums.RoleName;
+import br.com.luizbrand.worklog.role.RoleResponse;
 import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
-import br.com.luizbrand.worklog.service.UserService;
+import br.com.luizbrand.worklog.role.enums.RoleName;
 import org.junit.jupiter.api.BeforeEach;
 
 import static org.mockito.Mockito.*;

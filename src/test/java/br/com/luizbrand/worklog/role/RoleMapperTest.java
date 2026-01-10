@@ -1,7 +1,5 @@
-package br.com.luizbrand.worklog.mapper;
+package br.com.luizbrand.worklog.role;
 
-import br.com.luizbrand.worklog.dto.response.RoleResponse;
-import br.com.luizbrand.worklog.entity.Role;
 import br.com.luizbrand.worklog.role.enums.RoleName;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

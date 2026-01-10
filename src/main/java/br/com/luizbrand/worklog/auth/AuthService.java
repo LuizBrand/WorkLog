@@ -1,8 +1,8 @@
 package br.com.luizbrand.worklog.auth;
 
 import br.com.luizbrand.worklog.role.Role;
+import br.com.luizbrand.worklog.role.enums.RoleName;
 import br.com.luizbrand.worklog.user.User;
-import br.com.luizbrand.worklog.role.RoleName;
 import br.com.luizbrand.worklog.exception.Conflict.EmailAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.RoleNotFoundException;
 import br.com.luizbrand.worklog.user.UserMapper;

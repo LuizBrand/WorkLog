@@ -1,8 +1,8 @@
 package br.com.luizbrand.worklog.config;
 
 import br.com.luizbrand.worklog.role.Role;
-import br.com.luizbrand.worklog.role.RoleName;
 import br.com.luizbrand.worklog.role.RoleRepository;
+import br.com.luizbrand.worklog.role.enums.RoleName;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 

@@ -1,11 +1,10 @@
-package br.com.luizbrand.worklog.mapper;
+package br.com.luizbrand.worklog.user;
 
-import br.com.luizbrand.worklog.dto.request.RegisterRequest;
-import br.com.luizbrand.worklog.dto.response.AuthResponse;
-import br.com.luizbrand.worklog.dto.response.RoleResponse;
-import br.com.luizbrand.worklog.dto.response.UserResponse;
-import br.com.luizbrand.worklog.entity.Role;
-import br.com.luizbrand.worklog.entity.User;
+import br.com.luizbrand.worklog.auth.AuthResponse;
+import br.com.luizbrand.worklog.auth.RegisterRequest;
+import br.com.luizbrand.worklog.role.Role;
+import br.com.luizbrand.worklog.role.RoleMapper;
+import br.com.luizbrand.worklog.role.RoleResponse;
 import br.com.luizbrand.worklog.role.enums.RoleName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

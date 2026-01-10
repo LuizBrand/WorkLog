@@ -1,13 +1,12 @@
-package br.com.luizbrand.worklog.controller;
+package br.com.luizbrand.worklog.client;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-import br.com.luizbrand.worklog.dto.request.ClientRequest;
 import br.com.luizbrand.worklog.exception.NotFound.ClientNotFoundException;
+import br.com.luizbrand.worklog.system.SystemResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.http.MediaType;
-import br.com.luizbrand.worklog.dto.response.ClientResponse;
-import br.com.luizbrand.worklog.service.ClientService;
+
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

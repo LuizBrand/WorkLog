@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.role;
 
+import br.com.luizbrand.worklog.role.enums.RoleName;
 import br.com.luizbrand.worklog.user.User;
 import jakarta.persistence.*;
 import lombok.*;
