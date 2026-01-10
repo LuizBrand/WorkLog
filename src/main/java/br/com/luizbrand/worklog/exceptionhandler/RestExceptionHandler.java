@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.exceptionhandler;
 import br.com.luizbrand.worklog.exception.Conflict.ResourceAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -21,6 +22,7 @@ public class RestExceptionHandler {
     public ResponseEntity<ApiExceptionResponse> handleEmailAlreadyExists(ResourceAlreadyExistsException ex, WebRequest request) {
 
         ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
+                .mediaType(MediaType.APPLICATION_JSON)
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
                 .error("Conflict")
@@ -32,9 +34,10 @@ public class RestExceptionHandler {
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiExceptionResponse> handleUserNotFound(ResourceNotFoundException ex, WebRequest request) {
+    public ResponseEntity<ApiExceptionResponse> handleContentNotFound(ResourceNotFoundException ex, WebRequest request) {
 
         ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
+                .mediaType(MediaType.APPLICATION_JSON)
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.NOT_FOUND.value())
                 .error("Not Found")
@@ -43,6 +46,7 @@ public class RestExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(exceptionResponse, HttpStatus.NOT_FOUND);
+
     }
 
 
@@ -58,6 +62,7 @@ public class RestExceptionHandler {
         });
 
         ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
+                .mediaType(MediaType.APPLICATION_JSON)
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Bad Request")

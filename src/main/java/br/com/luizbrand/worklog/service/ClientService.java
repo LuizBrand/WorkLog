@@ -50,7 +50,7 @@ public class ClientService {
     public ClientResponse getClientByPublicId(UUID publicId) {
         return clientRepository.findByPublicId(publicId)
                 .map(clientMapper::toClientResponse)
-                .orElseThrow(() -> new ClientAlreadyExistsException("Client with public ID: " + publicId + " not found"));
+                .orElseThrow(() -> new ClientNotFoundException("Client with public ID: " + publicId + " not found"));
 
     }
 

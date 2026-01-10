@@ -2,6 +2,7 @@ package br.com.luizbrand.worklog.exceptionhandler;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
+import org.springframework.http.MediaType;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -9,6 +10,7 @@ import java.util.Map;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiExceptionResponse(
+        MediaType mediaType,
         LocalDateTime timestamp,
         int status,
         String error,
