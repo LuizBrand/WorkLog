@@ -1,9 +1,10 @@
 services:
   postgres:
     image: postgres:17
+    container_name: worklog-db
     environment:
       POSTGRES_USER: worklog
-      POSTGRES_PASSWORD: worklog2025
+      POSTGRES_PASSWORD: worklog@123
       POSTGRES_DB: worklog_db
     ports:
       - "5432:5432"

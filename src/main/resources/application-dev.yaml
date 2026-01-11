@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/worklog_db
     username: worklog
-    password: worklog2025
+    password: worklog@123
 
   jpa:
     show-sql: true
