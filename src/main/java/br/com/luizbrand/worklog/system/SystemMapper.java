@@ -9,7 +9,6 @@ public abstract class SystemMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "publicId", ignore = true)
-    @Mapping(target = "enabled", constant = "true")
     @Mapping(target = "clients", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
@@ -19,7 +18,6 @@ public abstract class SystemMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "publicId", ignore = true)
-    @Mapping(target = "enabled", constant = "true")
     @Mapping(target = "clients", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)

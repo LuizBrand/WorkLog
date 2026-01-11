@@ -18,7 +18,6 @@ public abstract class ClientMapper {
             @Mapping(target = "publicId", ignore = true),// Ignora, será gerado pelo @PrePersist
             @Mapping(target = "createdAt", ignore = true), // Ignora, será gerado pelo @CreationTimestamp
             @Mapping(target = "updatedAt", ignore = true), // Ignora, será gerado pelo @UpdateTimestamp
-            @Mapping(target = "enabled", constant = "true"), // Define um valor padrão "true" para novos clientes
             @Mapping(target = "systems", source = "systems")
     })
     public abstract Client toClient(ClientRequest clientRequest, List<Systems> systems);
