@@ -56,7 +56,7 @@ class UserServiceTest {
         user.setEmail("user@gmail.com");
         user.setRoles(Set.of(userRole));
         user.setCreatedAt(createdDate);
-        user.setUserEnabled(true);
+        user.setIsEnabled(true);
         RoleResponse roleResponse = new RoleResponse(RoleName.USER);
 
         userResponse = new UserResponse(
@@ -165,7 +165,7 @@ class UserServiceTest {
         @DisplayName("Should deactivate user when exists")
         void shouldDeactivateWhenUserExists() {
             //ARRANGE
-            user.setUserEnabled(true);
+            user.setIsEnabled(true);
             when(userRepository.findByPublicId(user.getPublicId()))
                     .thenReturn(Optional.of(user));
             ArgumentCaptor<User> userCaptor = forClass(User.class);
@@ -176,7 +176,7 @@ class UserServiceTest {
             //ASSERT
             verify(userRepository, times(1)).save(userCaptor.capture());
             User savedUser = userCaptor.getValue();
-            assertFalse(savedUser.isUserEnabled());
+            assertFalse(savedUser.isEnabled());
         }
 
         @Test

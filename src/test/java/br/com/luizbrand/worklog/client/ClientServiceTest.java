@@ -52,7 +52,7 @@ class ClientServiceTest {
         client = new Client();
         client.setPublicId(publicId);
         client.setName("Test Client");
-        client.setEnabled(true);
+        client.setIsEnabled(true);
 
         clientResponse = new ClientResponse(
                 publicId,
@@ -182,7 +182,7 @@ class ClientServiceTest {
 
                 assertNotNull(client);
                 assertEquals(request.name(), client.getName());
-                assertTrue(client.isEnabled());
+                assertTrue(client.getIsEnabled());
                 assertEquals(systemsList, client.getSystems());
                 assertNull(client.getId());
                 assertNull(client.getPublicId());
@@ -209,7 +209,7 @@ class ClientServiceTest {
                 client.setId(1L);
                 client.setPublicId(clientPublicId);
                 client.setName("Client A");
-                client.setEnabled(true);
+                client.setIsEnabled(true);
                 client.setCreatedAt(dateTime);
                 client.setSystems(List.of(system));
 
@@ -218,7 +218,7 @@ class ClientServiceTest {
                 assertNotNull(response);
                 assertEquals(client.getPublicId(), response.publicId());
                 assertEquals(client.getName(), response.name());
-                assertEquals(client.isEnabled(), response.enabled());
+                assertEquals(client.getIsEnabled(), response.enabled());
                 assertEquals(client.getCreatedAt().atOffset(ZoneOffset.UTC), response.createdAt());
                 assertNotNull(response.systems());
                 assertEquals(1, response.systems().size());
