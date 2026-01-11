@@ -37,7 +37,7 @@ public class UserService {
     public void deactiveUser(UUID publicId) {
         User user = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new UserNotFoundException("User with id: " + publicId + " not found"));
-        user.setUserEnabled(false);
+        user.setIsEnabled(false);
         userRepository.save(user);
 
     }
