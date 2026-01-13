@@ -10,12 +10,14 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
 
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
 @Getter
 @Setter
 @Entity
@@ -28,7 +30,6 @@ public class Ticket extends BaseEntity {
     @Column(nullable = false)
     private String description;
 
-    @Column(nullable = false)
     private String solution;
 
     @Column(name = "completed_at")
