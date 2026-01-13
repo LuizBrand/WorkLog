@@ -1,5 +1,7 @@
 package br.com.luizbrand.worklog.tickets;
 
+import br.com.luizbrand.worklog.client.Client;
+import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.tickets.enums.FieldType;
 import br.com.luizbrand.worklog.user.User;
 import jakarta.persistence.*;
@@ -31,6 +33,14 @@ public class TicketLog {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_id")
+    private Client client;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "system_id")
+    private Systems system;
 
     @Column(name = "field_changed")
     private String fieldChanged;
