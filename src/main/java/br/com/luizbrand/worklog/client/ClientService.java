@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.client;
 import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
+import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.system.SystemService;
 import br.com.luizbrand.worklog.exception.Conflict.ClientAlreadyExistsException;
@@ -91,6 +92,19 @@ public class ClientService {
         clientMapper.updateClient(clientRequest, associatedSystems, client);
         Client savedClient = clientRepository.save(client);
         return clientMapper.toClientResponse(savedClient);
+    }
+
+    public Client findByPublicId(UUID publicId) {
+        return clientRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ClientNotFoundException("Client with public ID: " + publicId + " not found"));
+    }
+
+    public Client findActiveClient(UUID publicId) {
+        Client client = this.findByPublicId(publicId);
+        if(!client.getIsEnabled()) {
+            throw new BusinessException("Client is not active");
+        }
+        return client;
     }
 
 }

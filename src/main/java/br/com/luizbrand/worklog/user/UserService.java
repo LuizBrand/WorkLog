@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.user;
 
+import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
 import br.com.luizbrand.worklog.user.dto.UserResponse;
 import org.springframework.stereotype.Service;
@@ -40,5 +41,18 @@ public class UserService {
         user.setIsEnabled(false);
         userRepository.save(user);
 
+    }
+
+    public User findEntityByPublicId(UUID publicId) {
+        return userRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new UserNotFoundException("System with public ID: " + publicId + " not found"));
+    }
+
+    public User findActiveUser(UUID publicId) {
+        User user = this.findEntityByPublicId(publicId);
+        if(!user.getIsEnabled()) {
+            throw new BusinessException("User is not active");
+        }
+        return user;
     }
 }

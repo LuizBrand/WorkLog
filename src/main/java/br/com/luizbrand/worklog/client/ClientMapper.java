@@ -2,6 +2,7 @@ package br.com.luizbrand.worklog.client;
 
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
+import br.com.luizbrand.worklog.client.dto.ClientSummary;
 import br.com.luizbrand.worklog.system.Systems;
 import org.mapstruct.*;
 
@@ -21,7 +22,12 @@ public abstract class ClientMapper {
             @Mapping(target = "systems", source = "systems")
     })
     public abstract Client toClient(ClientRequest clientRequest, List<Systems> systems);
+
+    @Mapping(source = "isEnabled", target = "enabled")
     public abstract ClientResponse toClientResponse(Client client);
+
+    @Mapping(source = "isEnabled", target = "enabled")
+    public abstract ClientSummary toSummary(Client client);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     public abstract void updateClient(ClientRequest clientRequest, List<Systems> systems, @MappingTarget Client client);

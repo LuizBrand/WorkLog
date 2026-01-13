@@ -4,6 +4,7 @@ import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import br.com.luizbrand.worklog.auth.dto.AuthResponse;
 import br.com.luizbrand.worklog.role.RoleMapper;
 import br.com.luizbrand.worklog.user.dto.UserResponse;
+import br.com.luizbrand.worklog.user.dto.UserSummary;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring", uses = {RoleMapper.class})
@@ -12,5 +13,6 @@ public interface UserMapper {
     User toUser(RegisterRequest userRequest);
     AuthResponse toAuthResponse(User user);
     UserResponse toUserResponse(User user);
+    UserSummary toUserSummary(User user);
 
 }

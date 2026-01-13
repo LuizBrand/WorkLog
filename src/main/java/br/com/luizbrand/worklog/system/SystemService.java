@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.system;
 
+import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.Conflict.SystemAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.SystemNotFoundException;
 import br.com.luizbrand.worklog.system.dto.SystemRequest;
@@ -77,5 +78,19 @@ public class SystemService {
         Systems savedSystem = systemRepository.save(system);
         return systemMapper.toSystemResponse(savedSystem);
 
+    }
+
+
+    public Systems findByPublicId(UUID publicId) {
+        return systemRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new SystemNotFoundException("System with public ID: " + publicId + " not found"));
+    }
+
+    public Systems findActiveSystem(UUID publicId) {
+        Systems system = this.findByPublicId(publicId);
+        if(!system.getIsEnabled()) {
+            throw new BusinessException("System is not active");
+        }
+        return system;
     }
 }
