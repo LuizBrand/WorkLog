@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.exceptionhandler;
 
+import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.Conflict.ResourceAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -49,7 +50,6 @@ public class RestExceptionHandler {
 
     }
 
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiExceptionResponse> handleValidationExceptions(MethodArgumentNotValidException ex, WebRequest request) {
 
@@ -73,4 +73,19 @@ public class RestExceptionHandler {
 
         return new ResponseEntity<>(exceptionResponse, HttpStatus.BAD_REQUEST);
     }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiExceptionResponse> handleBusinessException(BusinessException ex, WebRequest request) {
+        ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
+                .mediaType(MediaType.APPLICATION_JSON)
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNPROCESSABLE_ENTITY.value())
+                .error("Business role exception")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return new ResponseEntity<>(exceptionResponse, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
 }
