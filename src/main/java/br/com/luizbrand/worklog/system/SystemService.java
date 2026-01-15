@@ -38,7 +38,7 @@ public class SystemService {
 
         List<Systems> foundSystems = systemRepository.findAllByPublicIdIn(publicIds);
         if (foundSystems.size() != publicIds.size()) {
-            throw new RuntimeException("Um ou mais sistemas não foram encontrados para os IDs fornecidos.");
+            throw new SystemNotFoundException("Um ou mais sistemas não foram encontrados para os IDs fornecidos.");
         }
         return foundSystems;
     }
