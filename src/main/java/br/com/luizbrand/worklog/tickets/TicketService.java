@@ -49,8 +49,6 @@ public class TicketService {
             ticket.setUser(userService.findActiveUser(ticketRequest.userId()));
         }
 
-        //TODO:verificar se o valor do status é valido
-
         return ticketMapper.toResponse(ticketRepository.save(ticket));
     }
 
@@ -68,7 +66,6 @@ public class TicketService {
 
         //TODO: Mudar para buscar no security context o user loggado
         User currentUser = null;
-
         if (ticketRequest.userId() != null) {
             currentUser = userService.findEntityByPublicId(ticketRequest.userId());
         } else {
