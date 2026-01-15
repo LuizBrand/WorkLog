@@ -45,7 +45,7 @@ public class UserService {
 
     public User findEntityByPublicId(UUID publicId) {
         return userRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new UserNotFoundException("System with public ID: " + publicId + " not found"));
+                .orElseThrow(() -> new UserNotFoundException("User with public ID: " + publicId + " not found"));
     }
 
     public User findActiveUser(UUID publicId) {
