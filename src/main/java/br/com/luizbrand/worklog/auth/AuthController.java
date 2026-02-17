@@ -1,6 +1,8 @@
 package br.com.luizbrand.worklog.auth;
 
 import br.com.luizbrand.worklog.auth.dto.AuthResponse;
+import br.com.luizbrand.worklog.auth.dto.LoginRequest;
+import br.com.luizbrand.worklog.auth.dto.LoginResponse;
 import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -29,7 +31,7 @@ public class AuthController {
     //TODO: Implementar login e refresh token
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest login) {
-
+            return ResponseEntity.ok(new LoginResponse());
     }
 
 

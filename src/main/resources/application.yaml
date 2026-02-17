@@ -8,4 +8,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-
+  data:
+    redis:
+      repositories:
+        enabled: true

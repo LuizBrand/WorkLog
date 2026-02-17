@@ -1,11 +1,24 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/worklog_db
-    username: worklog
-    password: worklog@123
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
 
   jpa:
     show-sql: true
 
   flyway:
     enabled: true
+
+  data:
+    redis:
+      host: localhost
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY}
+      expiration: ${JWT_EXPIRATION}
+      refresh-token:
+        expiration: ${JWT_REFRESH_EXPIRATION}
