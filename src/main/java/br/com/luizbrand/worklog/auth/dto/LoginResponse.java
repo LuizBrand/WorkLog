@@ -1,4 +1,7 @@
 package br.com.luizbrand.worklog.auth.dto;
 
-public class LoginResponse {
+public record LoginResponse(
+        String acessToken,
+        String refreshToken
+) {
 }

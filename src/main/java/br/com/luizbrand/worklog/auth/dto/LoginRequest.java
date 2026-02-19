@@ -1,4 +1,3 @@
 package br.com.luizbrand.worklog.auth.dto;
 
-public class LoginRequest {
-}
+public record LoginRequest(String email, String password) {}

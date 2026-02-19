@@ -1,6 +1,8 @@
 package br.com.luizbrand.worklog.auth;
 
 import br.com.luizbrand.worklog.auth.dto.AuthResponse;
+import br.com.luizbrand.worklog.auth.dto.LoginRequest;
+import br.com.luizbrand.worklog.auth.dto.LoginResponse;
 import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import br.com.luizbrand.worklog.role.Role;
 import br.com.luizbrand.worklog.role.enums.RoleName;
@@ -11,6 +13,7 @@ import br.com.luizbrand.worklog.user.UserMapper;
 import br.com.luizbrand.worklog.role.RoleRepository;
 import br.com.luizbrand.worklog.user.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,13 +29,15 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserMapper userMapper;
     private final RoleRepository roleRepository;
+    private final JwtService jwtService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, UserMapper userMapper, RoleRepository roleRepository) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, UserMapper userMapper, RoleRepository roleRepository, JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.userMapper = userMapper;
         this.roleRepository = roleRepository;
+        this.jwtService = jwtService;
     }
 
     @Transactional
@@ -53,6 +58,19 @@ public class AuthService {
         User savedUser = userRepository.save(user);
         return userMapper.toAuthResponse(savedUser);
 
+    }
+
+    @Transactional
+    public LoginResponse login(LoginRequest request) {
+        UsernamePasswordAuthenticationToken userAndPass =
+                new UsernamePasswordAuthenticationToken(request.email(), request.password());
+
+        var auth = authenticationManager.authenticate(userAndPass);
+        User user = (User) auth.getPrincipal();
+        String acessToken = jwtService.generateAcessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        return new LoginResponse(acessToken, refreshToken);
     }
 
 }
