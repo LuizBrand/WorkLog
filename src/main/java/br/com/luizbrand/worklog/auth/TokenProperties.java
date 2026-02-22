@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @ConfigurationProperties(prefix = "security.jwt")
-public class JwtProperties {
+public class TokenProperties {
     private String secretKey;
     private long expiration;
     private RefreshToken refreshToken;

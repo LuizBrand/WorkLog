@@ -1,6 +1,6 @@
 package br.com.luizbrand.worklog.auth.dto;
 
-public record LoginResponse(
+public record AuthenticationResponse(
         String acessToken,
         String refreshToken
 ) {

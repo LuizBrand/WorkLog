@@ -1,6 +1,6 @@
 package br.com.luizbrand.worklog.user;
 
-import br.com.luizbrand.worklog.auth.dto.AuthResponse;
+import br.com.luizbrand.worklog.auth.dto.RegisterResponse;
 import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import br.com.luizbrand.worklog.role.Role;
 import br.com.luizbrand.worklog.role.RoleMapper;
@@ -73,14 +73,14 @@ class UserMapperTest {
         user.setCreatedAt(createdDate);
 
         //ACT
-        AuthResponse authResponse = userMapper.toAuthResponse(user);
+        RegisterResponse registerResponse = userMapper.toAuthResponse(user);
 
         //ASSERT
-        assertNotNull(authResponse);
-        assertEquals("username", authResponse.name());
-        assertEquals("user@gmail.com", authResponse.email());
-        assertEquals(user.getPublicId().toString(),  authResponse.publicId());
-        assertEquals(expectedDateString, authResponse.createdAt());
+        assertNotNull(registerResponse);
+        assertEquals("username", registerResponse.name());
+        assertEquals("user@gmail.com", registerResponse.email());
+        assertEquals(user.getPublicId().toString(),  registerResponse.publicId());
+        assertEquals(expectedDateString, registerResponse.createdAt());
 
     }
 
