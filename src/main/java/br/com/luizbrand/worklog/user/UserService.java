@@ -3,10 +3,14 @@ package br.com.luizbrand.worklog.user;
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
 import br.com.luizbrand.worklog.user.dto.UserResponse;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -55,4 +59,13 @@ public class UserService {
         }
         return user;
     }
+
+    public Optional<User> findUserByEmail(String userEmail) {
+        return userRepository.findByEmail(userEmail);
+    }
+
+    public User saveUser(User user) {
+        return userRepository.save(user);
+    }
+
 }
