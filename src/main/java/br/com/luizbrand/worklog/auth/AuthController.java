@@ -1,9 +1,10 @@
 package br.com.luizbrand.worklog.auth;
 
-import br.com.luizbrand.worklog.auth.dto.AuthResponse;
+import br.com.luizbrand.worklog.auth.dto.RegisterResponse;
 import br.com.luizbrand.worklog.auth.dto.LoginRequest;
-import br.com.luizbrand.worklog.auth.dto.LoginResponse;
+import br.com.luizbrand.worklog.auth.dto.AuthenticationResponse;
 import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
+import br.com.luizbrand.worklog.auth.refreshtoken.RefreshTokenRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,14 +24,25 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody @Valid RegisterRequest request) {
-        AuthResponse response = authService.register(request);
+    public ResponseEntity<RegisterResponse> register(@RequestBody @Valid RegisterRequest request) {
+        RegisterResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest login) {
+    public ResponseEntity<AuthenticationResponse> login(@RequestBody LoginRequest login) {
+        return ResponseEntity.ok(authService.login(login));
+    }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthenticationResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refreshToken(request.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody RefreshTokenRequest request) {
+        authService.logout(request.refreshToken());
+        return ResponseEntity.noContent().build();
     }
 
 

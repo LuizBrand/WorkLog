@@ -1,6 +1,7 @@
 package br.com.luizbrand.worklog.exceptionhandler;
 
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
+import br.com.luizbrand.worklog.exception.Business.RefreshTokenException;
 import br.com.luizbrand.worklog.exception.Conflict.ResourceAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -86,6 +87,20 @@ public class RestExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(exceptionResponse, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @ExceptionHandler(RefreshTokenException.class)
+    public ResponseEntity<ApiExceptionResponse> handleRefresTokenExcpetion(RefreshTokenException ex, WebRequest request) {
+        ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
+                .mediaType(MediaType.APPLICATION_JSON)
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error("Unauthorized")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return new ResponseEntity<>(exceptionResponse, HttpStatus.UNAUTHORIZED);
     }
 
 }
