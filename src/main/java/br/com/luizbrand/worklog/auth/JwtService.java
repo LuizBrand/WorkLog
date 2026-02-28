@@ -43,7 +43,7 @@ public class JwtService {
     }
 
     //Valid o token e retorna o subject
-    private String validateToken(String token) {
+    public String extractUsername(String token) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(tokenProperties.getSecretKey());
 
@@ -51,11 +51,17 @@ public class JwtService {
                     .withIssuer("WorkLog App")
                     .build()
                     .verify(token)
-                    .getSignature();
+                    .getSubject();
 
         } catch (JWTVerificationException ex) {
-            return "";
+            return null;
         }
+    }
+
+    public boolean isTokenValid(String token, User user) {
+        final String username = extractUsername(token);
+
+        return username != null && username.equals(user.getUsername());
     }
 
 }
