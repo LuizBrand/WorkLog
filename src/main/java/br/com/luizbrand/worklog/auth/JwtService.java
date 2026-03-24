@@ -7,6 +7,8 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.List;
@@ -17,6 +19,7 @@ public class JwtService {
 
     private final TokenProperties tokenProperties;
     private final String secret;
+    private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
 
     public JwtService(TokenProperties tokenProperties) {
         this.tokenProperties = tokenProperties;
@@ -52,8 +55,8 @@ public class JwtService {
                     .build()
                     .verify(token)
                     .getSubject();
-
         } catch (JWTVerificationException ex) {
+            logger.warn("JWT verification failed: {}", ex.getMessage());
             return null;
         }
     }

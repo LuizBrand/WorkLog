@@ -10,6 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -17,6 +19,8 @@ import java.io.IOException;
 public class AuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private static final Logger logger = LoggerFactory.getLogger(AuthFilter.class);
+
     private final CustomUserDetailsService userDetailsService;
 
     public AuthFilter(JwtService jwtService, CustomUserDetailsService userDetailsService) {
@@ -38,6 +42,9 @@ public class AuthFilter extends OncePerRequestFilter {
 
         jwt = authHeader.substring(7);
         userEmail = jwtService.extractUsername(jwt);
+        if (userEmail == null) {
+            logger.debug("JWT extraction failed or token is invalid/expired. Skipping authentication for this request.");
+        }
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             User user = (User) userDetailsService.loadUserByUsername(userEmail);
