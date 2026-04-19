@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/clients")
-public class ClientController {
+public class ClientController implements ClientControllerDocs {
 
     private final ClientService clientService;
 

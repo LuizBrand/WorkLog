@@ -1,0 +1,64 @@
+package br.com.luizbrand.worklog.tickets;
+
+import br.com.luizbrand.worklog.exceptionhandler.ApiExceptionResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
+import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
+
+import java.util.UUID;
+
+@Tag(name = "Tickets", description = "Gerenciamento de tickets de suporte — criação, consulta e atualização com log de alterações")
+public interface TicketControllerDocs {
+
+    @Operation(summary = "Criar ticket",
+            description = "Cria um novo ticket de suporte. O cliente e o sistema devem estar ativos. O usuário responsável é opcional.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Ticket criado com sucesso",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Cliente ou sistema inativo",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Cliente, sistema ou usuário não encontrado",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    ResponseEntity<TicketResponse> createTicket(TicketRequest ticketRequest);
+
+    @Operation(summary = "Buscar ticket por ID",
+            description = "Retorna um ticket específico pelo seu publicId (UUID), incluindo dados do cliente, sistema e usuário responsável.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ticket encontrado",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Ticket não encontrado",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    ResponseEntity<TicketResponse> getTicketByPublicId(
+            @Parameter(description = "ID público do ticket (UUID)", required = true) UUID publicId);
+
+    @Operation(summary = "Atualizar ticket",
+            description = "Atualiza um ticket existente. Apenas os campos enviados serão alterados. "
+                    + "Todas as mudanças são registradas automaticamente no log de auditoria (TicketLog).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ticket atualizado com sucesso",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Ticket não encontrado",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    ResponseEntity<TicketResponse> updateTicket(
+            @Parameter(description = "ID público do ticket (UUID)", required = true) UUID ticketPublicId,
+            TicketUpdateRequest ticketRequest);
+
+}

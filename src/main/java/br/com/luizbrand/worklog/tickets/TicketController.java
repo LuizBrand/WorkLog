@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/tickets")
-public class TicketController {
+public class TicketController implements TicketControllerDocs {
 
     private final TicketService ticketService;
 

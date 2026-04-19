@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/systems")
-public class SystemController {
+public class SystemController implements SystemControllerDocs {
 
     private final SystemService systemService;
 
