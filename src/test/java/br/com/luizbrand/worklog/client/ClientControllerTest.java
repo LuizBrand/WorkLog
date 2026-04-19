@@ -1,6 +1,8 @@
 package br.com.luizbrand.worklog.client;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import br.com.luizbrand.worklog.auth.AuthFilter;
+import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
 import br.com.luizbrand.worklog.exception.NotFound.ClientNotFoundException;
@@ -43,6 +45,12 @@ class ClientControllerTest {
 
     @MockitoBean
     private ClientService clientService;
+
+    @MockitoBean
+    private AuthFilter authFilter;
+
+    @MockitoBean
+    private CustomUserDetailsService customUserDetailsService;
 
     private ClientResponse clientResponse;
     private UUID nonExistenId;

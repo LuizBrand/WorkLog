@@ -1,5 +1,7 @@
 package br.com.luizbrand.worklog.user;
 
+import br.com.luizbrand.worklog.auth.AuthFilter;
+import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
 import br.com.luizbrand.worklog.role.dto.RoleResponse;
 import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
 import br.com.luizbrand.worklog.role.enums.RoleName;
@@ -37,6 +39,12 @@ class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private AuthFilter authFilter;
+
+    @MockitoBean
+    private CustomUserDetailsService customUserDetailsService;
 
     private UserResponse userResponse;
     private UUID nonExistenId;
