@@ -3,33 +3,36 @@ package br.com.luizbrand.worklog.role;
 import br.com.luizbrand.worklog.role.dto.RoleResponse;
 import br.com.luizbrand.worklog.role.enums.RoleName;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
+import org.mapstruct.factory.Mappers;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-@ActiveProfiles("test")
 class RoleMapperTest {
 
-    @Autowired
-    private RoleMapper roleMapper;
+    private final RoleMapper roleMapper = Mappers.getMapper(RoleMapper.class);
 
-    @Test
-    @DisplayName("Should map Role to RoleResponse using mapStruct implementaion")
-    void shouldMapRoletoRoleResponse() {
-        //ARRANGE
-        Role role = new Role();
-        role.setName(RoleName.USER);
+    @Nested
+    @DisplayName("Method: toRoleResponse()")
+    class ToRoleResponseTests {
 
-        // ACT
-        RoleResponse roleResponse = roleMapper.toRoleResponse(role);
+        @Test
+        @DisplayName("Should map the Role name to the RoleResponse role field")
+        void shouldMapRoleNameToResponse() {
+            Role role = new Role();
+            role.setName(RoleName.USER);
 
-        //ASSERT
-        assertNotNull(roleResponse);
-        assertEquals(RoleName.USER, roleResponse.role());
+            RoleResponse response = roleMapper.toRoleResponse(role);
 
+            assertThat(response).isNotNull();
+            assertThat(response.role()).isEqualTo(RoleName.USER);
+        }
+
+        @Test
+        @DisplayName("Should return null when the role is null")
+        void shouldReturnNullForNullRole() {
+            assertThat(roleMapper.toRoleResponse(null)).isNull();
+        }
     }
 }
