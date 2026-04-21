@@ -3,8 +3,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import br.com.luizbrand.worklog.auth.AuthFilter;
 import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
+import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
+import br.com.luizbrand.worklog.client.enums.StatusFiltro;
+import br.com.luizbrand.worklog.exception.Conflict.ClientAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.ClientNotFoundException;
 import br.com.luizbrand.worklog.system.dto.SystemResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,8 +31,10 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ActiveProfiles("test")
@@ -146,6 +151,103 @@ class ClientControllerTest {
                     .andExpect(jsonPath("$.systems[0].name").value(clientResponse.systems().get(0).name()));
         }
 
+        @Test
+        @DisplayName("Should return 404 Not Found when updating a non-existent client")
+        void shouldReturn404WhenUpdatingMissingClient() throws Exception {
+            ClientRequest clientRequest = new ClientRequest("Updated Client Name", List.of(publicId));
+            when(clientService.updateClient(nonExistenId, clientRequest))
+                    .thenThrow(new ClientNotFoundException(notFoundExpectedMessage));
+
+            mockMvc.perform(patch("/clients/{publicId}", nonExistenId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(clientRequest)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value(notFoundExpectedMessage));
+        }
+    }
+
+    @Nested
+    @DisplayName("Endpoint: GET /clients")
+    class findAllClients {
+
+        @Test
+        @DisplayName("Should return 200 OK with the list of clients and pass filters through")
+        void shouldReturnFilteredClients() throws Exception {
+            when(clientService.findAllClients(any(ClientFiltersParams.class)))
+                    .thenReturn(List.of(clientResponse));
+
+            mockMvc.perform(get("/clients")
+                            .param("name", "Client")
+                            .param("status", StatusFiltro.ATIVO.name())
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].publicId").value(clientResponse.publicId().toString()))
+                    .andExpect(jsonPath("$[0].name").value(clientResponse.name()));
+        }
+    }
+
+    @Nested
+    @DisplayName("Endpoint: POST /clients/")
+    class createClient {
+
+        @Test
+        @DisplayName("Should return 201 Created with the new client on a valid request")
+        void shouldReturn201OnSuccess() throws Exception {
+            UUID systemId = clientResponse.systems().get(0).publicId();
+            ClientRequest request = new ClientRequest("Client Name", List.of(systemId));
+
+            when(clientService.createClient(any(ClientRequest.class))).thenReturn(clientResponse);
+
+            mockMvc.perform(post("/clients/")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.publicId").value(clientResponse.publicId().toString()))
+                    .andExpect(jsonPath("$.name").value(clientResponse.name()));
+        }
+
+        @Test
+        @DisplayName("Should return 409 Conflict when the name already exists")
+        void shouldReturn409OnDuplicate() throws Exception {
+            UUID systemId = clientResponse.systems().get(0).publicId();
+            ClientRequest request = new ClientRequest("Client Name", List.of(systemId));
+            String message = "Client with name: Client Name already exists";
+            when(clientService.createClient(any(ClientRequest.class)))
+                    .thenThrow(new ClientAlreadyExistsException(message));
+
+            mockMvc.perform(post("/clients/")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message").value(message));
+        }
+
+        @Test
+        @DisplayName("Should return 400 Bad Request when the name is blank")
+        void shouldReturn400OnBlankName() throws Exception {
+            UUID systemId = clientResponse.systems().get(0).publicId();
+            ClientRequest invalid = new ClientRequest("", List.of(systemId));
+
+            mockMvc.perform(post("/clients/")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalid)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
+
+        @Test
+        @DisplayName("Should return 400 Bad Request when systemsPublicIds is empty")
+        void shouldReturn400OnEmptySystems() throws Exception {
+            ClientRequest invalid = new ClientRequest("Client Name", List.of());
+
+            mockMvc.perform(post("/clients/")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalid)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
     }
 
 }

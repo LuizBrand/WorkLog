@@ -1,11 +1,16 @@
 package br.com.luizbrand.worklog.client;
 
+import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
+import br.com.luizbrand.worklog.client.enums.StatusFiltro;
+import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.Conflict.ClientAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.ClientNotFoundException;
+import br.com.luizbrand.worklog.support.ClientTestBuilder;
 import br.com.luizbrand.worklog.system.SystemService;
 import br.com.luizbrand.worklog.system.Systems;
+import org.springframework.data.jpa.domain.Specification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -147,6 +152,122 @@ class ClientServiceTest {
             when(clientRepository.findByPublicId(publicId)).thenReturn(Optional.empty());
 
             assertThrows(ClientNotFoundException.class, () -> clientService.updateClient(publicId, request));
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: findAllClients()")
+    class FindAllClients {
+
+        @Test
+        @DisplayName("Should delegate to the repository with the filter specification and map each result")
+        void shouldReturnMappedList() {
+            ClientFiltersParams filters = new ClientFiltersParams("acme", StatusFiltro.ATIVO, Collections.emptyList());
+            Client other = ClientTestBuilder.aClient().withName("Other").build();
+            ClientResponse otherResponse = new ClientResponse(
+                    other.getPublicId(), other.getName(), true,
+                    OffsetDateTime.now(), Collections.emptyList());
+
+            when(clientRepository.findAll(any(Specification.class))).thenReturn(List.of(client, other));
+            when(clientMapper.toClientResponse(client)).thenReturn(clientResponse);
+            when(clientMapper.toClientResponse(other)).thenReturn(otherResponse);
+
+            List<ClientResponse> result = clientService.findAllClients(filters);
+
+            assertEquals(2, result.size());
+            assertEquals(clientResponse, result.get(0));
+            assertEquals(otherResponse, result.get(1));
+        }
+
+        @Test
+        @DisplayName("Should return an empty list when the repository finds nothing")
+        void shouldReturnEmptyListWhenNoMatches() {
+            ClientFiltersParams filters = new ClientFiltersParams(null, null, null);
+            when(clientRepository.findAll(any(Specification.class))).thenReturn(List.of());
+
+            List<ClientResponse> result = clientService.findAllClients(filters);
+
+            assertTrue(result.isEmpty());
+            verifyNoInteractions(clientMapper);
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: createClient() with associated systems")
+    class CreateClientWithSystems {
+
+        @Test
+        @DisplayName("Should resolve associated systems when systemsPublicIds is provided")
+        void shouldResolveSystemsWhenPublicIdsProvided() {
+            UUID systemId = UUID.randomUUID();
+            ClientRequest request = new ClientRequest("New Client", List.of(systemId));
+            Systems system = new Systems();
+            system.setPublicId(systemId);
+            List<Systems> associated = List.of(system);
+
+            when(clientRepository.findByName(request.name())).thenReturn(Optional.empty());
+            when(systemService.findAllByPublicIds(request.systemsPublicIds())).thenReturn(associated);
+            when(clientMapper.toClient(request, associated)).thenReturn(client);
+            when(clientRepository.save(client)).thenReturn(client);
+            when(clientMapper.toClientResponse(client)).thenReturn(clientResponse);
+
+            ClientResponse result = clientService.createClient(request);
+
+            assertNotNull(result);
+            verify(systemService, times(1)).findAllByPublicIds(request.systemsPublicIds());
+            verify(clientMapper, times(1)).toClient(request, associated);
+            verify(clientRepository).save(client);
+        }
+
+        @Test
+        @DisplayName("Should not call SystemService when systemsPublicIds is null")
+        void shouldNotResolveSystemsWhenPublicIdsNull() {
+            ClientRequest request = new ClientRequest("New Client", null);
+
+            when(clientRepository.findByName(request.name())).thenReturn(Optional.empty());
+            when(clientMapper.toClient(eq(request), anyList())).thenReturn(client);
+            when(clientRepository.save(client)).thenReturn(client);
+            when(clientMapper.toClientResponse(client)).thenReturn(clientResponse);
+
+            clientService.createClient(request);
+
+            verifyNoInteractions(systemService);
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: findActiveClient()")
+    class FindActiveClient {
+
+        @Test
+        @DisplayName("Should return the entity when the client is enabled")
+        void shouldReturnActiveClient() {
+            Client enabled = ClientTestBuilder.aClient().build();
+            when(clientRepository.findByPublicId(enabled.getPublicId())).thenReturn(Optional.of(enabled));
+
+            Client result = clientService.findActiveClient(enabled.getPublicId());
+
+            assertEquals(enabled, result);
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when the client is disabled")
+        void shouldThrowWhenDisabled() {
+            Client disabled = ClientTestBuilder.aClient().disabled().build();
+            when(clientRepository.findByPublicId(disabled.getPublicId())).thenReturn(Optional.of(disabled));
+
+            assertThrows(BusinessException.class,
+                    () -> clientService.findActiveClient(disabled.getPublicId()));
+        }
+
+        @Test
+        @DisplayName("Should propagate ClientNotFoundException when the client does not exist")
+        void shouldPropagateNotFound() {
+            UUID missing = UUID.randomUUID();
+            when(clientRepository.findByPublicId(missing)).thenReturn(Optional.empty());
+
+            assertThrows(ClientNotFoundException.class,
+                    () -> clientService.findActiveClient(missing));
         }
     }
 
