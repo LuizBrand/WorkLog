@@ -4,6 +4,7 @@ import br.com.luizbrand.worklog.exceptionhandler.ApiExceptionResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
+import br.com.luizbrand.worklog.user.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -59,6 +60,7 @@ public interface TicketControllerDocs {
     })
     ResponseEntity<TicketResponse> updateTicket(
             @Parameter(description = "ID público do ticket (UUID)", required = true) UUID ticketPublicId,
-            TicketUpdateRequest ticketRequest);
+            TicketUpdateRequest ticketRequest,
+            @Parameter(hidden = true) User currentUser);
 
 }

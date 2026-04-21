@@ -4,14 +4,17 @@ import br.com.luizbrand.worklog.auth.AuthFilter;
 import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
 import br.com.luizbrand.worklog.client.dto.ClientSummary;
 import br.com.luizbrand.worklog.exception.NotFound.TicketNotFoundException;
+import br.com.luizbrand.worklog.support.UserTestBuilder;
 import br.com.luizbrand.worklog.system.dto.SystemResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
+import br.com.luizbrand.worklog.user.User;
 import br.com.luizbrand.worklog.user.dto.UserSummary;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,6 +23,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -29,6 +34,8 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -61,6 +68,7 @@ class TicketControllerTest {
     private UUID systemPublicId;
     private UUID userPublicId;
     private TicketResponse ticketResponse;
+    private User authenticatedUser;
 
     @BeforeEach
     void setUp() {
@@ -68,6 +76,9 @@ class TicketControllerTest {
         clientPublicId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690da4ef1");
         systemPublicId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690da4ef2");
         userPublicId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690da4ef3");
+        authenticatedUser = UserTestBuilder.aUser()
+                .withEmail("editor@worklog.test")
+                .build();
 
         LocalDateTime createdAt = LocalDateTime.of(2026, 4, 21, 10, 0);
         ticketResponse = TicketResponse.builder()
@@ -160,12 +171,24 @@ class TicketControllerTest {
     @DisplayName("Endpoint: PUT /tickets/update/{ticketPublicId}")
     class UpdateTicket {
 
+        @BeforeEach
+        void authenticate() {
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken(
+                            authenticatedUser, null, authenticatedUser.getAuthorities()));
+        }
+
+        @AfterEach
+        void clearAuthentication() {
+            SecurityContextHolder.clearContext();
+        }
+
         @Test
         @DisplayName("Should return 200 OK with the updated ticket on a valid request")
         void shouldReturn200OnSuccess() throws Exception {
             TicketUpdateRequest request = new TicketUpdateRequest(
                     "Updated title", null, "Solved",
-                    TicketStatus.COMPLETED, LocalDateTime.of(2026, 4, 21, 12, 0), null);
+                    TicketStatus.COMPLETED, LocalDateTime.of(2026, 4, 21, 12, 0));
             TicketResponse updated = TicketResponse.builder()
                     .publicId(ticketPublicId)
                     .title("Updated title")
@@ -179,7 +202,8 @@ class TicketControllerTest {
                     .system(ticketResponse.system())
                     .user(ticketResponse.user())
                     .build();
-            when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class))).thenReturn(updated);
+            when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), any(User.class)))
+                    .thenReturn(updated);
 
             mockMvc.perform(put("/tickets/update/{ticketPublicId}", ticketPublicId)
                             .contentType(MediaType.APPLICATION_JSON)
@@ -194,9 +218,9 @@ class TicketControllerTest {
         @DisplayName("Should return 404 Not Found when updating a non-existent ticket")
         void shouldReturn404WhenUpdatingMissingTicket() throws Exception {
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    "any", null, null, null, null, null);
+                    "any", null, null, null, null);
             String message = "Ticket not found with publicId: " + ticketPublicId;
-            when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class)))
+            when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), any(User.class)))
                     .thenThrow(new TicketNotFoundException(message));
 
             mockMvc.perform(put("/tickets/update/{ticketPublicId}", ticketPublicId)
@@ -204,6 +228,23 @@ class TicketControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.message").value(message));
+        }
+
+        @Test
+        @DisplayName("Should pass the authenticated principal through to the service")
+        void shouldPassAuthenticatedPrincipalThroughToService() throws Exception {
+            TicketUpdateRequest request = new TicketUpdateRequest(
+                    "Updated title", null, null, null, null);
+            when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser)))
+                    .thenReturn(ticketResponse);
+
+            mockMvc.perform(put("/tickets/update/{ticketPublicId}", ticketPublicId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk());
+
+            verify(ticketService, times(1))
+                    .updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser));
         }
     }
 }

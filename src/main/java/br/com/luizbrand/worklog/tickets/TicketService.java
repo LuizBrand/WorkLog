@@ -59,18 +59,10 @@ public class TicketService {
     }
 
     @Transactional
-    public TicketResponse updateTicket(UUID ticketPublicId, TicketUpdateRequest ticketRequest) {
+    public TicketResponse updateTicket(UUID ticketPublicId, TicketUpdateRequest ticketRequest, User currentUser) {
 
         Ticket existingTicket = ticketRepository.findByPublicId(ticketPublicId)
                 .orElseThrow(() -> new TicketNotFoundException("Ticket not found with publicId: " + ticketPublicId));
-
-        //TODO: Mudar para buscar no security context o user loggado
-        User currentUser = null;
-        if (ticketRequest.userId() != null) {
-            currentUser = userService.findEntityByPublicId(ticketRequest.userId());
-        } else {
-            currentUser = existingTicket.getUser();
-        }
 
         Ticket newTicket = prepareNewTicket(existingTicket, ticketRequest);
 

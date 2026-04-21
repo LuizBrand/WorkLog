@@ -236,21 +236,28 @@ class TicketServiceTest {
         void shouldThrowWhenTicketMissing() {
             UUID missing = UUID.randomUUID();
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    "New title", null, null, null, null, null);
+                    "New title", null, null, null, null);
 
             when(ticketRepository.findByPublicId(missing)).thenReturn(Optional.empty());
 
             assertThrows(TicketNotFoundException.class,
-                    () -> ticketService.updateTicket(missing, request));
+                    () -> ticketService.updateTicket(missing, request, user));
 
             verify(ticketRepository, never()).save(any());
             verifyNoInteractions(ticketLogManager);
         }
 
         @Test
-        @DisplayName("Should apply only non-null fields and delegate log generation with the original ticket owner")
-        void shouldApplyPartialUpdateAndDelegateLogs() {
+        @DisplayName("Should apply only non-null fields and delegate log generation using the authenticated user as author")
+        void shouldApplyPartialUpdateAndUseAuthenticatedUserAsLogAuthor() {
             LocalDateTime completion = LocalDateTime.of(2026, 4, 21, 12, 0);
+            User ticketOwner = UserTestBuilder.aUser()
+                    .withPublicId(UUID.randomUUID())
+                    .withEmail("owner@worklog.test").build();
+            User editor = UserTestBuilder.aUser()
+                    .withPublicId(UUID.randomUUID())
+                    .withEmail("editor@worklog.test").build();
+
             Ticket existing = TicketTestBuilder.aTicket()
                     .withPublicId(ticket.getPublicId())
                     .withTitle("Old title")
@@ -258,18 +265,18 @@ class TicketServiceTest {
                     .withSolution(null)
                     .withStatus(TicketStatus.PENDING)
                     .withCompletedAt(null)
-                    .withClient(client).withSystem(system).withUser(user)
+                    .withClient(client).withSystem(system).withUser(ticketOwner)
                     .build();
 
             TicketUpdateRequest request = new TicketUpdateRequest(
                     "New title", null, "Fix applied",
-                    TicketStatus.COMPLETED, completion, null);
+                    TicketStatus.COMPLETED, completion);
 
             when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
             when(ticketRepository.save(existing)).thenReturn(existing);
             when(ticketMapper.toResponse(existing)).thenReturn(ticketResponse);
 
-            TicketResponse response = ticketService.updateTicket(existing.getPublicId(), request);
+            TicketResponse response = ticketService.updateTicket(existing.getPublicId(), request, editor);
 
             assertThat(response).isEqualTo(ticketResponse);
             // PATCH semantics: null description left unchanged
@@ -283,7 +290,7 @@ class TicketServiceTest {
             verify(ticketLogManager, times(1))
                     .generateLogs(org.mockito.ArgumentMatchers.eq(existing),
                             newTicketCaptor.capture(),
-                            org.mockito.ArgumentMatchers.eq(user));
+                            org.mockito.ArgumentMatchers.eq(editor));
             Ticket proposed = newTicketCaptor.getValue();
             assertThat(proposed.getTitle()).isEqualTo("New title");
             assertThat(proposed.getDescription()).isEqualTo("Old description");
@@ -292,30 +299,6 @@ class TicketServiceTest {
             assertThat(proposed.getCompletedAt()).isEqualTo(completion);
 
             verifyNoInteractions(userService);
-        }
-
-        @Test
-        @DisplayName("Should resolve the new user when userId is provided in the update request")
-        void shouldResolveUserWhenUserIdProvided() {
-            Ticket existing = TicketTestBuilder.aTicket()
-                    .withClient(client).withSystem(system).withUser(user).build();
-            User newUser = UserTestBuilder.aUser()
-                    .withPublicId(UUID.randomUUID())
-                    .withEmail("new-owner@worklog.test").build();
-            TicketUpdateRequest request = new TicketUpdateRequest(
-                    null, null, null, null, null, newUser.getPublicId());
-
-            when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
-            when(userService.findEntityByPublicId(newUser.getPublicId())).thenReturn(newUser);
-            when(ticketRepository.save(existing)).thenReturn(existing);
-            when(ticketMapper.toResponse(existing)).thenReturn(ticketResponse);
-
-            ticketService.updateTicket(existing.getPublicId(), request);
-
-            verify(ticketLogManager, times(1))
-                    .generateLogs(org.mockito.ArgumentMatchers.eq(existing),
-                            any(Ticket.class),
-                            org.mockito.ArgumentMatchers.eq(newUser));
         }
     }
 }

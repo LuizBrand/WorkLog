@@ -3,9 +3,11 @@ package br.com.luizbrand.worklog.tickets;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
+import br.com.luizbrand.worklog.user.User;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -33,8 +35,10 @@ public class TicketController implements TicketControllerDocs {
     }
 
     @PutMapping("/update/{ticketPublicId}")
-    public ResponseEntity<TicketResponse> updateTicket(@PathVariable UUID ticketPublicId, @RequestBody @Valid TicketUpdateRequest ticketRequest) {
-        TicketResponse ticketResponse = ticketService.updateTicket(ticketPublicId, ticketRequest);
+    public ResponseEntity<TicketResponse> updateTicket(@PathVariable UUID ticketPublicId,
+                                                       @RequestBody @Valid TicketUpdateRequest ticketRequest,
+                                                       @AuthenticationPrincipal User currentUser) {
+        TicketResponse ticketResponse = ticketService.updateTicket(ticketPublicId, ticketRequest, currentUser);
         return ResponseEntity.ok(ticketResponse);
 
     }
