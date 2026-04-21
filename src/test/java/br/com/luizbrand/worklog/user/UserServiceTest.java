@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.user;
 
+import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.role.Role;
 import br.com.luizbrand.worklog.role.dto.RoleResponse;
 import br.com.luizbrand.worklog.role.enums.RoleName;
@@ -196,5 +197,95 @@ class UserServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("Method: findEntityByPublicId()")
+    class FindEntityByPublicIdTests {
+
+        @Test
+        @DisplayName("Should return the entity when the user exists")
+        void shouldReturnEntityWhenFound() {
+            when(userRepository.findByPublicId(user.getPublicId())).thenReturn(Optional.of(user));
+
+            User result = userService.findEntityByPublicId(user.getPublicId());
+
+            assertEquals(user, result);
+            verifyNoInteractions(userMapper);
+        }
+
+        @Test
+        @DisplayName("Should throw UserNotFoundException when the user does not exist")
+        void shouldThrowWhenMissing() {
+            String expectedMessage = "User with public ID: " + nonExistenId + " not found";
+            when(userRepository.findByPublicId(nonExistenId)).thenReturn(Optional.empty());
+
+            UserNotFoundException ex = assertThrows(UserNotFoundException.class,
+                    () -> userService.findEntityByPublicId(nonExistenId));
+
+            assertEquals(expectedMessage, ex.getMessage());
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: findActiveUser()")
+    class FindActiveUserTests {
+
+        @Test
+        @DisplayName("Should return the entity when the user is enabled")
+        void shouldReturnActiveUser() {
+            user.setIsEnabled(true);
+            when(userRepository.findByPublicId(user.getPublicId())).thenReturn(Optional.of(user));
+
+            User result = userService.findActiveUser(user.getPublicId());
+
+            assertEquals(user, result);
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when the user is disabled")
+        void shouldThrowWhenDisabled() {
+            user.setIsEnabled(false);
+            when(userRepository.findByPublicId(user.getPublicId())).thenReturn(Optional.of(user));
+
+            BusinessException ex = assertThrows(BusinessException.class,
+                    () -> userService.findActiveUser(user.getPublicId()));
+
+            assertEquals("User is not active", ex.getMessage());
+        }
+
+        @Test
+        @DisplayName("Should propagate UserNotFoundException when the user does not exist")
+        void shouldPropagateNotFound() {
+            when(userRepository.findByPublicId(nonExistenId)).thenReturn(Optional.empty());
+
+            assertThrows(UserNotFoundException.class,
+                    () -> userService.findActiveUser(nonExistenId));
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: findUserByEmail()")
+    class FindUserByEmailTests {
+
+        @Test
+        @DisplayName("Should return Optional with user when the email exists")
+        void shouldReturnUserWhenEmailExists() {
+            when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+
+            Optional<User> result = userService.findUserByEmail(user.getEmail());
+
+            assertTrue(result.isPresent());
+            assertEquals(user, result.get());
+        }
+
+        @Test
+        @DisplayName("Should return an empty Optional when the email does not exist")
+        void shouldReturnEmptyWhenEmailMissing() {
+            when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+
+            Optional<User> result = userService.findUserByEmail("ghost@example.com");
+
+            assertTrue(result.isEmpty());
+        }
+    }
 
 }
