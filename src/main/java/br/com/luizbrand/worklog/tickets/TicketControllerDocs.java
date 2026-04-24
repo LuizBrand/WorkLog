@@ -2,6 +2,7 @@ package br.com.luizbrand.worklog.tickets;
 
 import br.com.luizbrand.worklog.exceptionhandler.ApiExceptionResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketFiltersParams;
+import br.com.luizbrand.worklog.tickets.dto.TicketLogResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
@@ -58,6 +59,19 @@ public interface TicketControllerDocs {
     })
     ResponseEntity<TicketResponse> getTicketByPublicId(
             @Parameter(description = "ID público do ticket (UUID)", required = true) UUID publicId);
+
+    @Operation(summary = "Listar logs de auditoria do ticket",
+            description = "Retorna uma página do histórico de alterações (TicketLog) do ticket informado, ordenada por data de alteração decrescente.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Página de logs do ticket",
+                    content = @Content(schema = @Schema(implementation = TicketLogResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Ticket não encontrado",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    ResponseEntity<Page<TicketLogResponse>> getTicketLogs(
+            @Parameter(description = "ID público do ticket (UUID)", required = true) UUID publicId,
+            Pageable pageable);
 
     @Operation(summary = "Atualizar ticket",
             description = "Atualiza um ticket existente. Apenas os campos enviados serão alterados. "

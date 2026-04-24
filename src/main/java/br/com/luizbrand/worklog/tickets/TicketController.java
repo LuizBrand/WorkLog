@@ -1,6 +1,7 @@
 package br.com.luizbrand.worklog.tickets;
 
 import br.com.luizbrand.worklog.tickets.dto.TicketFiltersParams;
+import br.com.luizbrand.worklog.tickets.dto.TicketLogResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
@@ -21,9 +22,11 @@ import java.util.UUID;
 public class TicketController implements TicketControllerDocs {
 
     private final TicketService ticketService;
+    private final TicketLogManager ticketLogManager;
 
-    public TicketController(TicketService ticketService) {
+    public TicketController(TicketService ticketService, TicketLogManager ticketLogManager) {
         this.ticketService = ticketService;
+        this.ticketLogManager = ticketLogManager;
     }
 
     @GetMapping
@@ -41,6 +44,11 @@ public class TicketController implements TicketControllerDocs {
     public ResponseEntity<TicketResponse> getTicketByPublicId(@PathVariable UUID publicId) {
         TicketResponse ticketResponse = ticketService.findTicketByPublicId(publicId);
         return ResponseEntity.ok(ticketResponse);
+    }
+
+    @GetMapping("/{publicId}/logs")
+    public ResponseEntity<Page<TicketLogResponse>> getTicketLogs(@PathVariable UUID publicId, Pageable pageable) {
+        return ResponseEntity.ok(ticketLogManager.findLogsByTicket(publicId, pageable));
     }
 
     @PutMapping("/update/{ticketPublicId}")

@@ -10,9 +10,11 @@ import br.com.luizbrand.worklog.support.UserTestBuilder;
 import br.com.luizbrand.worklog.system.SystemMapper;
 import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.system.dto.SystemResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketLogResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
+import br.com.luizbrand.worklog.tickets.enums.FieldType;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
 import br.com.luizbrand.worklog.user.UserMapper;
@@ -192,6 +194,49 @@ class TicketMapperTest {
         @DisplayName("Should return null when the ticket is null")
         void shouldReturnNullForNullTicket() {
             assertThat(ticketMapper.toSummary(null)).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: toLogResponse()")
+    class ToLogResponseTests {
+
+        @Test
+        @DisplayName("Should map every field and delegate the author to UserMapper")
+        void shouldMapLogFieldsAndDelegateUser() {
+            UUID changeGroupId = UUID.randomUUID();
+            LocalDateTime changeDate = LocalDateTime.of(2026, 4, 21, 12, 0);
+            TicketLog log = TicketLog.builder()
+                    .id(42L)
+                    .changeGroupId(changeGroupId)
+                    .fieldChanged("title")
+                    .fieldType(FieldType.STRING)
+                    .oldValue("Old title")
+                    .newValue("New title")
+                    .changeDate(changeDate)
+                    .user(user)
+                    .build();
+
+            UserSummary userSummary = new UserSummary(user.getPublicId(), user.getName(), user.getEmail());
+            when(userMapper.toUserSummary(user)).thenReturn(userSummary);
+
+            TicketLogResponse response = ticketMapper.toLogResponse(log);
+
+            assertThat(response.changeGroupId()).isEqualTo(changeGroupId);
+            assertThat(response.fieldChanged()).isEqualTo("title");
+            assertThat(response.fieldType()).isEqualTo(FieldType.STRING);
+            assertThat(response.oldValue()).isEqualTo("Old title");
+            assertThat(response.newValue()).isEqualTo("New title");
+            assertThat(response.changeDate()).isEqualTo(changeDate);
+            assertThat(response.user()).isEqualTo(userSummary);
+
+            verify(userMapper, times(1)).toUserSummary(user);
+        }
+
+        @Test
+        @DisplayName("Should return null when the log is null")
+        void shouldReturnNullForNullLog() {
+            assertThat(ticketMapper.toLogResponse(null)).isNull();
         }
     }
 }

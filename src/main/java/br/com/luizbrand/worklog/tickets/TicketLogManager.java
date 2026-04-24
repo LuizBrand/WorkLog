@@ -1,7 +1,11 @@
 package br.com.luizbrand.worklog.tickets;
 
+import br.com.luizbrand.worklog.exception.NotFound.TicketNotFoundException;
+import br.com.luizbrand.worklog.tickets.dto.TicketLogResponse;
 import br.com.luizbrand.worklog.tickets.enums.FieldType;
 import br.com.luizbrand.worklog.user.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -14,9 +18,15 @@ import java.util.UUID;
 public class TicketLogManager {
 
     private final TicketLogRepository ticketLogRepository;
+    private final TicketRepository ticketRepository;
+    private final TicketMapper ticketMapper;
 
-    public TicketLogManager(TicketLogRepository ticketLogRepository) {
+    public TicketLogManager(TicketLogRepository ticketLogRepository,
+                            TicketRepository ticketRepository,
+                            TicketMapper ticketMapper) {
         this.ticketLogRepository = ticketLogRepository;
+        this.ticketRepository = ticketRepository;
+        this.ticketMapper = ticketMapper;
     }
 
     protected void generateLogs(Ticket oldTicket, Ticket newTicket, User currentUser) {
@@ -32,6 +42,15 @@ public class TicketLogManager {
         if (!logs.isEmpty()) {
             ticketLogRepository.saveAll(logs);
         }
+    }
+
+    public Page<TicketLogResponse> findLogsByTicket(UUID ticketPublicId, Pageable pageable) {
+        ticketRepository.findByPublicId(ticketPublicId)
+                .orElseThrow(() -> new TicketNotFoundException("Ticket not found with publicId: " + ticketPublicId));
+
+        return ticketLogRepository
+                .findByTicket_PublicIdOrderByChangeDateDesc(ticketPublicId, pageable)
+                .map(ticketMapper::toLogResponse);
     }
 
     private void checkChange(Ticket associatedticket, Ticket newTicket,
@@ -54,7 +73,7 @@ public class TicketLogManager {
                 .fieldChanged(fieldName)
                 .fieldType(fieldType)
                 .oldValue(oldString)
-                .newValeu(newString)
+                .newValue(newString)
                 .changeDate(LocalDateTime.now())
                 .build();
 

@@ -2,6 +2,7 @@ package br.com.luizbrand.worklog.tickets;
 
 import br.com.luizbrand.worklog.client.ClientMapper;
 import br.com.luizbrand.worklog.system.SystemMapper;
+import br.com.luizbrand.worklog.tickets.dto.TicketLogResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
@@ -19,6 +20,9 @@ public interface TicketMapper {
     TicketResponse toResponse(Ticket ticket);
 
     TicketSummary toSummary(Ticket ticket);
+
+    @Mapping(target = "user", source = "user")
+    TicketLogResponse toLogResponse(TicketLog log);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "publicId", ignore = true)

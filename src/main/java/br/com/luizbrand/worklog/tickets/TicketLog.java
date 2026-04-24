@@ -53,7 +53,7 @@ public class TicketLog {
     private String oldValue;
 
     @Column(name = "new_value", columnDefinition = "TEXT")
-    private String newValeu;
+    private String newValue;
 
     @Column(name = "change_date")
     private LocalDateTime changeDate;

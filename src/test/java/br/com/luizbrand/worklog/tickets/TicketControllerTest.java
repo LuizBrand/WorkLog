@@ -7,10 +7,12 @@ import br.com.luizbrand.worklog.exception.NotFound.TicketNotFoundException;
 import br.com.luizbrand.worklog.support.UserTestBuilder;
 import br.com.luizbrand.worklog.system.dto.SystemResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketFiltersParams;
+import br.com.luizbrand.worklog.tickets.dto.TicketLogResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
+import br.com.luizbrand.worklog.tickets.enums.FieldType;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
 import br.com.luizbrand.worklog.user.dto.UserSummary;
@@ -66,6 +68,9 @@ class TicketControllerTest {
 
     @MockitoBean
     private TicketService ticketService;
+
+    @MockitoBean
+    private TicketLogManager ticketLogManager;
 
     @MockitoBean
     private AuthFilter authFilter;
@@ -337,6 +342,62 @@ class TicketControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content").isArray())
                     .andExpect(jsonPath("$.totalElements").value(0));
+        }
+    }
+
+    @Nested
+    @DisplayName("Endpoint: GET /tickets/{publicId}/logs")
+    class GetTicketLogs {
+
+        @Test
+        @DisplayName("Should return 200 OK with a page of log responses and pass the pageable through to the manager")
+        void shouldReturnPagedLogs() throws Exception {
+            UUID changeGroupId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690daeeee");
+            LocalDateTime changeDate = LocalDateTime.of(2026, 4, 21, 12, 0);
+            TicketLogResponse log = TicketLogResponse.builder()
+                    .changeGroupId(changeGroupId)
+                    .fieldChanged("title")
+                    .fieldType(FieldType.STRING)
+                    .oldValue("Old").newValue("New")
+                    .changeDate(changeDate)
+                    .user(new UserSummary(userPublicId, "Editor", "editor@worklog.test"))
+                    .build();
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<TicketLogResponse> page = new PageImpl<>(List.of(log), pageable, 1);
+
+            when(ticketLogManager.findLogsByTicket(eq(ticketPublicId), any(Pageable.class)))
+                    .thenReturn(page);
+
+            mockMvc.perform(get("/tickets/{publicId}/logs", ticketPublicId)
+                            .param("page", "0")
+                            .param("size", "20")
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content[0].changeGroupId").value(changeGroupId.toString()))
+                    .andExpect(jsonPath("$.content[0].fieldChanged").value("title"))
+                    .andExpect(jsonPath("$.content[0].fieldType").value(FieldType.STRING.name()))
+                    .andExpect(jsonPath("$.content[0].oldValue").value("Old"))
+                    .andExpect(jsonPath("$.content[0].newValue").value("New"))
+                    .andExpect(jsonPath("$.content[0].user.publicId").value(userPublicId.toString()))
+                    .andExpect(jsonPath("$.totalElements").value(1));
+
+            ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+            verify(ticketLogManager, times(1)).findLogsByTicket(eq(ticketPublicId), captor.capture());
+            assertThat(captor.getValue().getPageNumber()).isEqualTo(0);
+            assertThat(captor.getValue().getPageSize()).isEqualTo(20);
+        }
+
+        @Test
+        @DisplayName("Should return 404 Not Found when the ticket does not exist")
+        void shouldReturn404WhenTicketMissing() throws Exception {
+            String message = "Ticket not found with publicId: " + ticketPublicId;
+            when(ticketLogManager.findLogsByTicket(eq(ticketPublicId), any(Pageable.class)))
+                    .thenThrow(new br.com.luizbrand.worklog.exception.NotFound.TicketNotFoundException(message));
+
+            mockMvc.perform(get("/tickets/{publicId}/logs", ticketPublicId))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value(message));
         }
     }
 }

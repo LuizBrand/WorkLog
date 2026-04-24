@@ -1,11 +1,13 @@
 package br.com.luizbrand.worklog.tickets;
 
 import br.com.luizbrand.worklog.client.Client;
+import br.com.luizbrand.worklog.exception.NotFound.TicketNotFoundException;
 import br.com.luizbrand.worklog.support.ClientTestBuilder;
 import br.com.luizbrand.worklog.support.SystemTestBuilder;
 import br.com.luizbrand.worklog.support.TicketTestBuilder;
 import br.com.luizbrand.worklog.support.UserTestBuilder;
 import br.com.luizbrand.worklog.system.Systems;
+import br.com.luizbrand.worklog.tickets.dto.TicketLogResponse;
 import br.com.luizbrand.worklog.tickets.enums.FieldType;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
@@ -18,21 +20,36 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TicketLogManagerTest {
 
     @Mock
     private TicketLogRepository ticketLogRepository;
+
+    @Mock
+    private TicketRepository ticketRepository;
+
+    @Mock
+    private TicketMapper ticketMapper;
 
     @InjectMocks
     private TicketLogManager ticketLogManager;
@@ -87,7 +104,7 @@ class TicketLogManagerTest {
             assertThat(log.getFieldChanged()).isEqualTo("title");
             assertThat(log.getFieldType()).isEqualTo(FieldType.STRING);
             assertThat(log.getOldValue()).isEqualTo("Old title");
-            assertThat(log.getNewValeu()).isEqualTo("New title");
+            assertThat(log.getNewValue()).isEqualTo("New title");
             assertThat(log.getUser()).isEqualTo(currentUser);
             assertThat(log.getTicket()).isSameAs(oldTicket);
             assertThat(log.getClient()).isEqualTo(client);
@@ -110,7 +127,7 @@ class TicketLogManagerTest {
             assertThat(logs.get(0).getFieldChanged()).isEqualTo("description");
             assertThat(logs.get(0).getFieldType()).isEqualTo(FieldType.STRING);
             assertThat(logs.get(0).getOldValue()).isEqualTo("Old description");
-            assertThat(logs.get(0).getNewValeu()).isEqualTo("New description");
+            assertThat(logs.get(0).getNewValue()).isEqualTo("New description");
         }
 
         @Test
@@ -126,7 +143,7 @@ class TicketLogManagerTest {
             assertThat(logs).hasSize(1);
             assertThat(logs.get(0).getFieldChanged()).isEqualTo("solution");
             assertThat(logs.get(0).getOldValue()).isNull();
-            assertThat(logs.get(0).getNewValeu()).isEqualTo("Applied a fix");
+            assertThat(logs.get(0).getNewValue()).isEqualTo("Applied a fix");
         }
 
         @Test
@@ -143,7 +160,7 @@ class TicketLogManagerTest {
             assertThat(logs).hasSize(1);
             assertThat(logs.get(0).getFieldChanged()).isEqualTo("solution");
             assertThat(logs.get(0).getOldValue()).isEqualTo("Previous fix");
-            assertThat(logs.get(0).getNewValeu()).isNull();
+            assertThat(logs.get(0).getNewValue()).isNull();
         }
 
         @Test
@@ -160,7 +177,7 @@ class TicketLogManagerTest {
             assertThat(logs.get(0).getFieldChanged()).isEqualTo("status");
             assertThat(logs.get(0).getFieldType()).isEqualTo(FieldType.STRING);
             assertThat(logs.get(0).getOldValue()).isEqualTo(TicketStatus.PENDING.name());
-            assertThat(logs.get(0).getNewValeu()).isEqualTo(TicketStatus.COMPLETED.name());
+            assertThat(logs.get(0).getNewValue()).isEqualTo(TicketStatus.COMPLETED.name());
         }
 
         @Test
@@ -178,7 +195,7 @@ class TicketLogManagerTest {
             assertThat(logs.get(0).getFieldChanged()).isEqualTo("Conclusion Date");
             assertThat(logs.get(0).getFieldType()).isEqualTo(FieldType.DATETIME);
             assertThat(logs.get(0).getOldValue()).isNull();
-            assertThat(logs.get(0).getNewValeu()).isEqualTo(completion.toString());
+            assertThat(logs.get(0).getNewValue()).isEqualTo(completion.toString());
         }
     }
 
@@ -253,6 +270,95 @@ class TicketLogManagerTest {
             ticketLogManager.generateLogs(oldTicket, newTicket, currentUser);
 
             verify(ticketLogRepository, times(1)).saveAll(org.mockito.ArgumentMatchers.anyList());
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: findLogsByTicket()")
+    class FindLogsByTicketTests {
+
+        @Test
+        @DisplayName("Should throw TicketNotFoundException when the ticket does not exist")
+        void shouldThrowWhenTicketMissing() {
+            UUID missing = UUID.randomUUID();
+            Pageable pageable = PageRequest.of(0, 20);
+            when(ticketRepository.findByPublicId(missing)).thenReturn(Optional.empty());
+
+            TicketNotFoundException ex = assertThrows(TicketNotFoundException.class,
+                    () -> ticketLogManager.findLogsByTicket(missing, pageable));
+
+            assertThat(ex.getMessage()).contains(missing.toString());
+            verifyNoInteractions(ticketLogRepository);
+            verifyNoInteractions(ticketMapper);
+        }
+
+        @Test
+        @DisplayName("Should return a page of mapped log responses ordered by changeDate desc")
+        void shouldReturnMappedPage() {
+            Ticket ticket = TicketTestBuilder.aTicket()
+                    .withClient(client).withSystem(system).withUser(currentUser)
+                    .build();
+            Pageable pageable = PageRequest.of(0, 20);
+
+            TicketLog firstLog = TicketLog.builder()
+                    .id(1L)
+                    .changeGroupId(UUID.randomUUID())
+                    .fieldChanged("title")
+                    .fieldType(FieldType.STRING)
+                    .oldValue("Old").newValue("New")
+                    .changeDate(LocalDateTime.of(2026, 4, 22, 10, 0))
+                    .user(currentUser)
+                    .ticket(ticket)
+                    .build();
+            TicketLog secondLog = TicketLog.builder()
+                    .id(2L)
+                    .changeGroupId(UUID.randomUUID())
+                    .fieldChanged("status")
+                    .fieldType(FieldType.STRING)
+                    .oldValue("PENDING").newValue("COMPLETED")
+                    .changeDate(LocalDateTime.of(2026, 4, 21, 9, 0))
+                    .user(currentUser)
+                    .ticket(ticket)
+                    .build();
+
+            TicketLogResponse firstResponse = TicketLogResponse.builder()
+                    .changeGroupId(firstLog.getChangeGroupId()).fieldChanged("title").build();
+            TicketLogResponse secondResponse = TicketLogResponse.builder()
+                    .changeGroupId(secondLog.getChangeGroupId()).fieldChanged("status").build();
+
+            when(ticketRepository.findByPublicId(ticket.getPublicId())).thenReturn(Optional.of(ticket));
+            Page<TicketLog> repoPage = new PageImpl<>(List.of(firstLog, secondLog), pageable, 2);
+            when(ticketLogRepository.findByTicket_PublicIdOrderByChangeDateDesc(ticket.getPublicId(), pageable))
+                    .thenReturn(repoPage);
+            when(ticketMapper.toLogResponse(firstLog)).thenReturn(firstResponse);
+            when(ticketMapper.toLogResponse(secondLog)).thenReturn(secondResponse);
+
+            Page<TicketLogResponse> result = ticketLogManager.findLogsByTicket(ticket.getPublicId(), pageable);
+
+            assertThat(result.getContent()).containsExactly(firstResponse, secondResponse);
+            assertThat(result.getTotalElements()).isEqualTo(2);
+            verify(ticketLogRepository, times(1))
+                    .findByTicket_PublicIdOrderByChangeDateDesc(eq(ticket.getPublicId()), eq(pageable));
+            verify(ticketMapper, times(1)).toLogResponse(firstLog);
+            verify(ticketMapper, times(1)).toLogResponse(secondLog);
+        }
+
+        @Test
+        @DisplayName("Should return an empty page when the ticket has no logs")
+        void shouldReturnEmptyPage() {
+            Ticket ticket = TicketTestBuilder.aTicket()
+                    .withClient(client).withSystem(system).withUser(currentUser)
+                    .build();
+            Pageable pageable = PageRequest.of(0, 20);
+
+            when(ticketRepository.findByPublicId(ticket.getPublicId())).thenReturn(Optional.of(ticket));
+            when(ticketLogRepository.findByTicket_PublicIdOrderByChangeDateDesc(ticket.getPublicId(), pageable))
+                    .thenReturn(Page.empty(pageable));
+
+            Page<TicketLogResponse> result = ticketLogManager.findLogsByTicket(ticket.getPublicId(), pageable);
+
+            assertThat(result.getContent()).isEmpty();
+            verify(ticketMapper, never()).toLogResponse(org.mockito.ArgumentMatchers.any());
         }
     }
 }
