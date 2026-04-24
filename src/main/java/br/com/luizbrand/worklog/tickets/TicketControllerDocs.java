@@ -1,8 +1,10 @@
 package br.com.luizbrand.worklog.tickets;
 
 import br.com.luizbrand.worklog.exceptionhandler.ApiExceptionResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketFiltersParams;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
 import br.com.luizbrand.worklog.user.User;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,12 +14,23 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
 import java.util.UUID;
 
 @Tag(name = "Tickets", description = "Gerenciamento de tickets de suporte — criação, consulta e atualização com log de alterações")
 public interface TicketControllerDocs {
+
+    @Operation(summary = "Listar tickets",
+            description = "Retorna uma página de tickets (resumo) com filtros opcionais por título, status, cliente, sistema, usuário e faixa de datas de criação.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Página de tickets",
+                    content = @Content(schema = @Schema(implementation = TicketSummary.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    ResponseEntity<Page<TicketSummary>> findAllTickets(TicketFiltersParams filters, Pageable pageable);
 
     @Operation(summary = "Criar ticket",
             description = "Cria um novo ticket de suporte. O cliente e o sistema devem estar ativos. O usuário responsável é opcional.")

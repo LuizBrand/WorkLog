@@ -6,8 +6,10 @@ import br.com.luizbrand.worklog.client.dto.ClientSummary;
 import br.com.luizbrand.worklog.exception.NotFound.TicketNotFoundException;
 import br.com.luizbrand.worklog.support.UserTestBuilder;
 import br.com.luizbrand.worklog.system.dto.SystemResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketFiltersParams;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
@@ -20,8 +22,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.mockito.ArgumentCaptor;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,8 +37,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -245,6 +257,86 @@ class TicketControllerTest {
 
             verify(ticketService, times(1))
                     .updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser));
+        }
+    }
+
+    @Nested
+    @DisplayName("Endpoint: GET /tickets")
+    class FindAllTickets {
+
+        @Test
+        @DisplayName("Should return 200 OK with a page of summaries and pass filters and paging to the service")
+        void shouldReturnPagedSummaries() throws Exception {
+            TicketSummary summary = TicketSummary.builder()
+                    .publicId(ticketPublicId)
+                    .title("Ticket X")
+                    .description("Desc")
+                    .status(TicketStatus.PENDING)
+                    .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                    .updatedAt(LocalDateTime.of(2026, 4, 21, 10, 0))
+                    .completedAt(null)
+                    .client(ticketResponse.client())
+                    .system(ticketResponse.system())
+                    .user(ticketResponse.user())
+                    .build();
+            Pageable pageable = PageRequest.of(0, 20, Sort.by("createdAt").descending());
+            Page<TicketSummary> page = new PageImpl<>(List.of(summary), pageable, 1);
+
+            when(ticketService.findAll(any(TicketFiltersParams.class), any(Pageable.class)))
+                    .thenReturn(page);
+
+            mockMvc.perform(get("/tickets")
+                            .param("title", "Login")
+                            .param("status", "PENDING")
+                            .param("clientId", clientPublicId.toString())
+                            .param("systemId", systemPublicId.toString())
+                            .param("userId", userPublicId.toString())
+                            .param("createdFrom", "2026-04-01")
+                            .param("createdTo", "2026-04-30")
+                            .param("page", "0")
+                            .param("size", "20")
+                            .param("sort", "createdAt,desc")
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content[0].publicId").value(ticketPublicId.toString()))
+                    .andExpect(jsonPath("$.content[0].title").value("Ticket X"))
+                    .andExpect(jsonPath("$.content[0].status").value(TicketStatus.PENDING.name()))
+                    .andExpect(jsonPath("$.content[0].solution").doesNotExist())
+                    .andExpect(jsonPath("$.totalElements").value(1))
+                    .andExpect(jsonPath("$.number").value(0))
+                    .andExpect(jsonPath("$.size").value(20));
+
+            ArgumentCaptor<TicketFiltersParams> filtersCaptor = ArgumentCaptor.forClass(TicketFiltersParams.class);
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+            verify(ticketService, times(1)).findAll(filtersCaptor.capture(), pageableCaptor.capture());
+
+            TicketFiltersParams filters = filtersCaptor.getValue();
+            assertThat(filters.title()).isEqualTo("Login");
+            assertThat(filters.status()).isEqualTo(TicketStatus.PENDING);
+            assertThat(filters.clientId()).isEqualTo(clientPublicId);
+            assertThat(filters.systemId()).isEqualTo(systemPublicId);
+            assertThat(filters.userId()).isEqualTo(userPublicId);
+            assertThat(filters.createdFrom()).isEqualTo(LocalDate.of(2026, 4, 1));
+            assertThat(filters.createdTo()).isEqualTo(LocalDate.of(2026, 4, 30));
+
+            Pageable captured = pageableCaptor.getValue();
+            assertThat(captured.getPageNumber()).isEqualTo(0);
+            assertThat(captured.getPageSize()).isEqualTo(20);
+            assertThat(captured.getSort().getOrderFor("createdAt")).isNotNull();
+            assertThat(captured.getSort().getOrderFor("createdAt").isDescending()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should return 200 OK with an empty page when no ticket matches")
+        void shouldReturnEmptyPage() throws Exception {
+            when(ticketService.findAll(any(TicketFiltersParams.class), any(Pageable.class)))
+                    .thenReturn(Page.empty(PageRequest.of(0, 20)));
+
+            mockMvc.perform(get("/tickets").accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.totalElements").value(0));
         }
     }
 }

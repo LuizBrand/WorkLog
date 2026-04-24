@@ -10,8 +10,10 @@ import br.com.luizbrand.worklog.support.TicketTestBuilder;
 import br.com.luizbrand.worklog.support.UserTestBuilder;
 import br.com.luizbrand.worklog.system.SystemService;
 import br.com.luizbrand.worklog.system.Systems;
+import br.com.luizbrand.worklog.tickets.dto.TicketFiltersParams;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
@@ -25,14 +27,22 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -299,6 +309,57 @@ class TicketServiceTest {
             assertThat(proposed.getCompletedAt()).isEqualTo(completion);
 
             verifyNoInteractions(userService);
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: findAll()")
+    class FindAllTickets {
+
+        @Test
+        @DisplayName("Should delegate to the repository with spec and pageable and map every entity to a summary")
+        void shouldReturnMappedPage() {
+            Ticket other = TicketTestBuilder.aTicket()
+                    .withPublicId(UUID.randomUUID())
+                    .withTitle("Other")
+                    .withClient(client).withSystem(system).withUser(user)
+                    .build();
+            Pageable pageable = PageRequest.of(0, 10);
+            TicketFiltersParams filters = new TicketFiltersParams(
+                    "login", TicketStatus.PENDING,
+                    client.getPublicId(), system.getPublicId(), user.getPublicId(),
+                    LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+            TicketSummary summaryA = TicketSummary.builder().publicId(ticket.getPublicId()).title("A").build();
+            TicketSummary summaryB = TicketSummary.builder().publicId(other.getPublicId()).title("B").build();
+
+            Page<Ticket> repoPage = new PageImpl<>(List.of(ticket, other), pageable, 2);
+            when(ticketRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(repoPage);
+            when(ticketMapper.toSummary(ticket)).thenReturn(summaryA);
+            when(ticketMapper.toSummary(other)).thenReturn(summaryB);
+
+            Page<TicketSummary> result = ticketService.findAll(filters, pageable);
+
+            assertThat(result.getTotalElements()).isEqualTo(2);
+            assertThat(result.getContent()).containsExactly(summaryA, summaryB);
+            verify(ticketRepository, times(1)).findAll(any(Specification.class), eq(pageable));
+            verify(ticketMapper, times(1)).toSummary(ticket);
+            verify(ticketMapper, times(1)).toSummary(other);
+        }
+
+        @Test
+        @DisplayName("Should return an empty page when the repository has no matches")
+        void shouldReturnEmptyPage() {
+            Pageable pageable = PageRequest.of(0, 10);
+            TicketFiltersParams filters = new TicketFiltersParams(null, null, null, null, null, null, null);
+            when(ticketRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(Page.empty(pageable));
+
+            Page<TicketSummary> result = ticketService.findAll(filters, pageable);
+
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isZero();
+            verify(ticketMapper, never()).toSummary(any());
         }
     }
 }

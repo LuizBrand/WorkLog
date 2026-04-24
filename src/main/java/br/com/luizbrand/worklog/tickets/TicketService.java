@@ -5,11 +5,15 @@ import br.com.luizbrand.worklog.client.ClientService;
 import br.com.luizbrand.worklog.exception.NotFound.TicketNotFoundException;
 import br.com.luizbrand.worklog.system.SystemService;
 import br.com.luizbrand.worklog.system.Systems;
+import br.com.luizbrand.worklog.tickets.dto.TicketFiltersParams;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
 import br.com.luizbrand.worklog.user.User;
 import br.com.luizbrand.worklog.user.UserService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +54,11 @@ public class TicketService {
         }
 
         return ticketMapper.toResponse(ticketRepository.save(ticket));
+    }
+
+    public Page<TicketSummary> findAll(TicketFiltersParams filters, Pageable pageable) {
+        return ticketRepository.findAll(TicketSpecification.findByFilter(filters), pageable)
+                .map(ticketMapper::toSummary);
     }
 
     public TicketResponse findTicketByPublicId(UUID publicId) {

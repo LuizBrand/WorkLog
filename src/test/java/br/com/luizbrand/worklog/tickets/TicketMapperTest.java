@@ -12,6 +12,7 @@ import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.system.dto.SystemResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
 import br.com.luizbrand.worklog.user.UserMapper;
@@ -141,6 +142,56 @@ class TicketMapperTest {
         @DisplayName("Should return null when the ticket is null")
         void shouldReturnNullForNullTicket() {
             assertThat(ticketMapper.toResponse(null)).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: toSummary()")
+    class ToSummaryTests {
+
+        @Test
+        @DisplayName("Should map the ticket to a summary without solution and delegate nested mapping")
+        void shouldMapTicketToSummaryWithoutSolution() {
+            LocalDateTime completion = LocalDateTime.of(2026, 4, 21, 12, 0);
+            Ticket ticket = TicketTestBuilder.aTicket()
+                    .withTitle("Ticket X")
+                    .withDescription("Desc X")
+                    .withSolution("Sol X")
+                    .withStatus(TicketStatus.COMPLETED)
+                    .withCompletedAt(completion)
+                    .withClient(client).withSystem(system).withUser(user)
+                    .build();
+
+            ClientSummary clientSummary = new ClientSummary(client.getPublicId(), client.getName(), true);
+            SystemResponse systemResponse = new SystemResponse(system.getPublicId(), system.getName());
+            UserSummary userSummary = new UserSummary(user.getPublicId(), user.getName(), user.getEmail());
+
+            when(clientMapper.toSummary(client)).thenReturn(clientSummary);
+            when(systemMapper.toSystemResponse(system)).thenReturn(systemResponse);
+            when(userMapper.toUserSummary(user)).thenReturn(userSummary);
+
+            TicketSummary summary = ticketMapper.toSummary(ticket);
+
+            assertThat(summary.publicId()).isEqualTo(ticket.getPublicId());
+            assertThat(summary.title()).isEqualTo("Ticket X");
+            assertThat(summary.description()).isEqualTo("Desc X");
+            assertThat(summary.status()).isEqualTo(TicketStatus.COMPLETED);
+            assertThat(summary.createdAt()).isEqualTo(ticket.getCreatedAt());
+            assertThat(summary.updatedAt()).isEqualTo(ticket.getUpdatedAt());
+            assertThat(summary.completedAt()).isEqualTo(completion);
+            assertThat(summary.client()).isEqualTo(clientSummary);
+            assertThat(summary.system()).isEqualTo(systemResponse);
+            assertThat(summary.user()).isEqualTo(userSummary);
+
+            verify(clientMapper, times(1)).toSummary(client);
+            verify(systemMapper, times(1)).toSystemResponse(system);
+            verify(userMapper, times(1)).toUserSummary(user);
+        }
+
+        @Test
+        @DisplayName("Should return null when the ticket is null")
+        void shouldReturnNullForNullTicket() {
+            assertThat(ticketMapper.toSummary(null)).isNull();
         }
     }
 }

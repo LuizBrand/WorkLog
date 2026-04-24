@@ -1,10 +1,14 @@
 package br.com.luizbrand.worklog.tickets;
 
+import br.com.luizbrand.worklog.tickets.dto.TicketFiltersParams;
 import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
+import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
 import br.com.luizbrand.worklog.user.User;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +24,11 @@ public class TicketController implements TicketControllerDocs {
 
     public TicketController(TicketService ticketService) {
         this.ticketService = ticketService;
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<TicketSummary>> findAllTickets(TicketFiltersParams filters, Pageable pageable) {
+        return ResponseEntity.ok(ticketService.findAll(filters, pageable));
     }
 
     @PostMapping("/create")
