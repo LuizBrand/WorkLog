@@ -8,6 +8,9 @@ changed without an update here.
 ## In Progress
 - [ ] (none — waiting on next instruction from the user)
 
+## Session log
+- [x] 2026-04-25 — initialized `memory/` snapshot of current project state (agents, plan, progress, verify, gotchas). Committed as `b8c02da` `docs(memory): seed agent memory snapshot`. Working-tree change to `.gitignore` is pre-existing from before this session and not part of this commit.
+
 ## Completed (consolidated from current code state)
 
 ### Infrastructure & configuration
