@@ -6,11 +6,21 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- [ ] (none — Phase 3 shipped; awaiting next instruction from the user)
+- [ ] MVP Phase 4 (`POST /users/me/change-password`) — code complete, suite green at 183/183, awaiting user approval to commit (`feat(users): add POST /users/me/change-password`).
 
 ## Session log
 - [x] 2026-04-25 — initialized `memory/` snapshot of current project state (agents, plan, progress, verify, gotchas). Committed as `b8c02da` `docs(memory): seed agent memory snapshot`. Working-tree change to `.gitignore` is pre-existing from before this session and not part of this commit.
 - [x] 2026-04-25 — MVP Phase 3 (`GET /users/me`) implemented TDD. Added `UserControllerTest$getMe` (2 tests: 200 OK + principal-passthrough), `UserService.getMe(User)`, `GET /users/me` on `UserController` with `@AuthenticationPrincipal`, and matching `UserControllerDocs#getMe` operation. Suite at 175/175 green. Committed as `0b65888` `feat(users): add GET /users/me endpoint`.
+- [x] 2026-04-25 — MVP Phase 4 (`POST /users/me/change-password`) implemented TDD per `.claude/mvp-v1-phases-4-5.md`:
+  - Wrote 4 failing service tests (`UserServiceTest$ChangeMyPassword`: happy path, wrong current password → `BusinessException`, refresh token missing → `BusinessException`, refresh token belongs to other user → `BusinessException`) and 4 failing controller tests (`UserControllerTest$ChangeMyPassword`: 204 success, 422 on `BusinessException`, 400 on validation, principal-passthrough). Confirmed compilation failures named the missing `ChangePasswordRequest`, then implemented.
+  - New DTO `ChangePasswordRequest` (record with `@NotBlank currentPassword`, `@NotBlank @Size(min=8) newPassword`, `@NotBlank refreshToken`).
+  - `UserService` ctor now also takes `@Lazy PasswordEncoder` + `RefreshTokenService`; new `changeMyPassword(User, ChangePasswordRequest)` validates current password, validates refresh-token ownership against `currentUser.getEmail()`, re-hashes and saves the user, then deletes the supplied refresh token.
+  - `UserController` exposes `POST /users/me/change-password` returning 204; `UserControllerDocs#changeMyPassword` documents 204/400/401/422.
+  - **Gotcha caught by full suite only:** non-lazy `PasswordEncoder` injection produced `BeanCurrentlyInCreationException` (`UserService` → `SecurityConfig` → `AuthFilter` → `CustomUserDetailsService` → `UserService`). Fixed with `@Lazy` on the ctor param; logged in `memory/gotchas.md`. Lesson: focused `UserServiceTest`/`UserControllerTest` did not boot the full context — only `WorklogApplicationTests` did.
+  - Aligned `ChangePasswordRequest#newPassword` validation with the existing `RegisterRequest#password` rule (`@NotBlank` + `@Size(min=8)` + `@Pattern("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$")` with the same Portuguese messages) per user request — keep `currentPassword` and `refreshToken` as plain `@NotBlank`. Updated the controller happy-path fixture to `NewStrong1Password` so it satisfies the new pattern.
+  - User explicitly chose to keep the `@Lazy PasswordEncoder` workaround instead of extracting `PasswordEncoder` into its own `@Configuration`. Decision recorded; no architectural change to `SecurityConfig`.
+  - Suite: 183/183 green (175 → 183, +8 = 4 service + 4 controller).
+  - Awaiting user approval to commit `feat(users): add POST /users/me/change-password` (no Co-Authored-By trailer per project memory).
 
 ## Completed (consolidated from current code state)
 
