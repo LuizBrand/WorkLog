@@ -1,0 +1,18 @@
+[verify]
+# Compila o projeto sem rodar os testes
+typecheck = "./mvnw compile -q"
+
+# Roda todos os testes
+test = "./mvnw test"
+
+# Compila + testa um arquivo específico (usado pelo hook lint_file)
+# {file} é substituído pelo caminho do arquivo alterado
+lint_file = "./mvnw test -Dtest=$(basename {file} .java) -DfailIfNoTests=false"
+
+# Verificação completa: compila, testa e empacota (sem instalar no repositório local)
+# Use este comando se quiser uma checagem mais completa antes de considerar a tarefa pronta
+# full = "./mvnw verify"
+
+[visual]
+# Projeto Java sem UI — verificação visual desabilitada
+required = false

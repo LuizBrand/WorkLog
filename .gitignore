@@ -32,5 +32,8 @@ build/
 
 ### VS Code ###
 .vscode/
-.claude/
+.claude/settings.local.json
 mvnw
+
+# added by agent-md installer
+.agent/
