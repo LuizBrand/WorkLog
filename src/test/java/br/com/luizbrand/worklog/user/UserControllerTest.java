@@ -2,11 +2,14 @@ package br.com.luizbrand.worklog.user;
 
 import br.com.luizbrand.worklog.auth.AuthFilter;
 import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
+import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.role.dto.RoleResponse;
 import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
 import br.com.luizbrand.worklog.role.enums.RoleName;
 import br.com.luizbrand.worklog.support.UserTestBuilder;
+import br.com.luizbrand.worklog.user.dto.ChangePasswordRequest;
 import br.com.luizbrand.worklog.user.dto.UserResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -42,6 +45,9 @@ class UserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private UserService userService;
@@ -222,6 +228,98 @@ class UserControllerTest {
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$.message").value(notFoundExpectedMessage));
 
+        }
+    }
+
+    @Nested
+    @DisplayName("Endpoint: POST /users/me/change-password")
+    class ChangeMyPassword {
+
+        private User authenticatedUser;
+        private ChangePasswordRequest validRequest;
+
+        @BeforeEach
+        void authenticate() {
+            authenticatedUser = UserTestBuilder.aUser()
+                    .withPublicId(UUID.fromString(userResponse.publicId()))
+                    .withName(userResponse.name())
+                    .withEmail(userResponse.email())
+                    .build();
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken(
+                            authenticatedUser, null, authenticatedUser.getAuthorities()));
+
+            validRequest = new ChangePasswordRequest(
+                    "current-plain",
+                    "NewStrong1Password",
+                    UUID.randomUUID().toString());
+        }
+
+        @AfterEach
+        void clearAuthentication() {
+            SecurityContextHolder.clearContext();
+        }
+
+        @Test
+        @DisplayName("Should return 204 No Content when the password is changed successfully")
+        void shouldReturnNoContentOnSuccess() throws Exception {
+
+            doNothing().when(userService).changeMyPassword(any(User.class), any(ChangePasswordRequest.class));
+
+            mockMvc.perform(post("/users/me/change-password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(validRequest)))
+                    .andExpect(status().isNoContent());
+
+            verify(userService, times(1))
+                    .changeMyPassword(any(User.class), any(ChangePasswordRequest.class));
+        }
+
+        @Test
+        @DisplayName("Should return 422 Unprocessable Entity when the service throws BusinessException")
+        void shouldReturnUnprocessableEntityWhenServiceThrowsBusiness() throws Exception {
+
+            doThrow(new BusinessException("Senha atual incorreta"))
+                    .when(userService).changeMyPassword(any(User.class), any(ChangePasswordRequest.class));
+
+            mockMvc.perform(post("/users/me/change-password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(validRequest)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.message").value("Senha atual incorreta"));
+        }
+
+        @Test
+        @DisplayName("Should return 400 Bad Request when the body is missing required fields")
+        void shouldReturnBadRequestWhenBodyIsInvalid() throws Exception {
+
+            ChangePasswordRequest invalid = new ChangePasswordRequest(" ", "short", " ");
+
+            mockMvc.perform(post("/users/me/change-password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalid)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+
+            verify(userService, never())
+                    .changeMyPassword(any(User.class), any(ChangePasswordRequest.class));
+        }
+
+        @Test
+        @DisplayName("Should pass the authenticated principal through to the service")
+        void shouldPassAuthenticatedPrincipalThroughToService() throws Exception {
+
+            doNothing().when(userService)
+                    .changeMyPassword(eq(authenticatedUser), any(ChangePasswordRequest.class));
+
+            mockMvc.perform(post("/users/me/change-password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(validRequest)))
+                    .andExpect(status().isNoContent());
+
+            verify(userService, times(1))
+                    .changeMyPassword(eq(authenticatedUser), any(ChangePasswordRequest.class));
         }
     }
 

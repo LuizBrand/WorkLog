@@ -1,6 +1,8 @@
 package br.com.luizbrand.worklog.user;
 
+import br.com.luizbrand.worklog.user.dto.ChangePasswordRequest;
 import br.com.luizbrand.worklog.user.dto.UserResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,6 +29,14 @@ public class UserController implements UserControllerDocs {
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getMe(@AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(userService.getMe(currentUser));
+    }
+
+    @PostMapping("/me/change-password")
+    public ResponseEntity<Void> changeMyPassword(
+            @AuthenticationPrincipal User currentUser,
+            @RequestBody @Valid ChangePasswordRequest request) {
+        userService.changeMyPassword(currentUser, request);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{publicId}")

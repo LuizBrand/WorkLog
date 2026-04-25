@@ -1,10 +1,14 @@
 package br.com.luizbrand.worklog.user;
 
+import br.com.luizbrand.worklog.auth.refreshtoken.RefreshToken;
+import br.com.luizbrand.worklog.auth.refreshtoken.RefreshTokenService;
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.role.Role;
 import br.com.luizbrand.worklog.role.dto.RoleResponse;
 import br.com.luizbrand.worklog.role.enums.RoleName;
 import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
+import br.com.luizbrand.worklog.support.UserTestBuilder;
+import br.com.luizbrand.worklog.user.dto.ChangePasswordRequest;
 import br.com.luizbrand.worklog.user.dto.UserResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
@@ -33,6 +38,12 @@ class UserServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     @InjectMocks
     private UserService userService;
@@ -285,6 +296,103 @@ class UserServiceTest {
             Optional<User> result = userService.findUserByEmail("ghost@example.com");
 
             assertTrue(result.isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: changeMyPassword()")
+    class ChangeMyPassword {
+
+        private User currentUser;
+        private RefreshToken storedToken;
+        private ChangePasswordRequest request;
+
+        @BeforeEach
+        void prepare() {
+            currentUser = UserTestBuilder.aUser()
+                    .withEmail("user@gmail.com")
+                    .withPassword("encoded-current-password")
+                    .build();
+
+            storedToken = new RefreshToken("user@gmail.com", 60_000L);
+            request = new ChangePasswordRequest(
+                    "current-plain",
+                    "new-strong-password",
+                    storedToken.getId());
+        }
+
+        @Test
+        @DisplayName("Should re-hash the password, persist the user and revoke the supplied refresh token on success")
+        void shouldRotatePasswordAndDeleteRefreshTokenOnHappyPath() {
+            when(passwordEncoder.matches("current-plain", "encoded-current-password"))
+                    .thenReturn(true);
+            when(refreshTokenService.findByToken(storedToken.getId()))
+                    .thenReturn(Optional.of(storedToken));
+            when(passwordEncoder.encode("new-strong-password"))
+                    .thenReturn("encoded-new-password");
+
+            userService.changeMyPassword(currentUser, request);
+
+            ArgumentCaptor<User> userCaptor = forClass(User.class);
+            verify(userRepository, times(1)).save(userCaptor.capture());
+            assertEquals("encoded-new-password", userCaptor.getValue().getPassword());
+            verify(refreshTokenService, times(1)).deleteByToken(storedToken.getId());
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when the current password does not match")
+        void shouldThrowWhenCurrentPasswordIsWrong() {
+            when(passwordEncoder.matches("current-plain", "encoded-current-password"))
+                    .thenReturn(false);
+
+            BusinessException ex = assertThrows(BusinessException.class,
+                    () -> userService.changeMyPassword(currentUser, request));
+
+            assertEquals("Senha atual incorreta", ex.getMessage());
+            verify(userRepository, never()).save(any(User.class));
+            verify(refreshTokenService, never()).deleteByToken(anyString());
+            verify(refreshTokenService, never()).findByToken(anyString());
+            verify(passwordEncoder, never()).encode(anyString());
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when the supplied refresh token does not exist")
+        void shouldThrowWhenRefreshTokenIsMissing() {
+            when(passwordEncoder.matches("current-plain", "encoded-current-password"))
+                    .thenReturn(true);
+            when(refreshTokenService.findByToken(storedToken.getId()))
+                    .thenReturn(Optional.empty());
+
+            BusinessException ex = assertThrows(BusinessException.class,
+                    () -> userService.changeMyPassword(currentUser, request));
+
+            assertEquals("Refresh token inválido para o usuário", ex.getMessage());
+            verify(userRepository, never()).save(any(User.class));
+            verify(refreshTokenService, never()).deleteByToken(anyString());
+            verify(passwordEncoder, never()).encode(anyString());
+        }
+
+        @Test
+        @DisplayName("Should throw BusinessException when the supplied refresh token belongs to another user")
+        void shouldThrowWhenRefreshTokenBelongsToOtherUser() {
+            RefreshToken otherToken = new RefreshToken("attacker@example.com", 60_000L);
+            ChangePasswordRequest stolen = new ChangePasswordRequest(
+                    "current-plain",
+                    "new-strong-password",
+                    otherToken.getId());
+
+            when(passwordEncoder.matches("current-plain", "encoded-current-password"))
+                    .thenReturn(true);
+            when(refreshTokenService.findByToken(otherToken.getId()))
+                    .thenReturn(Optional.of(otherToken));
+
+            BusinessException ex = assertThrows(BusinessException.class,
+                    () -> userService.changeMyPassword(currentUser, stolen));
+
+            assertEquals("Refresh token inválido para o usuário", ex.getMessage());
+            verify(userRepository, never()).save(any(User.class));
+            verify(refreshTokenService, never()).deleteByToken(anyString());
+            verify(passwordEncoder, never()).encode(anyString());
         }
     }
 

@@ -1,6 +1,7 @@
 package br.com.luizbrand.worklog.user;
 
 import br.com.luizbrand.worklog.exceptionhandler.ApiExceptionResponse;
+import br.com.luizbrand.worklog.user.dto.ChangePasswordRequest;
 import br.com.luizbrand.worklog.user.dto.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,6 +36,18 @@ public interface UserControllerDocs {
             @ApiResponse(responseCode = "401", description = "Não autenticado")
     })
     ResponseEntity<UserResponse> getMe(User currentUser);
+
+    @Operation(summary = "Alterar a própria senha",
+            description = "Altera a senha do usuário autenticado e revoga o refresh token informado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Senha alterada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Requisição inválida (campos obrigatórios ausentes ou inválidos)",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "422", description = "Senha atual incorreta ou refresh token inválido para o usuário",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class)))
+    })
+    ResponseEntity<Void> changeMyPassword(User currentUser, ChangePasswordRequest request);
 
     @Operation(summary = "Buscar usuário por ID",
             description = "Retorna um usuário específico pelo seu publicId (UUID).")
