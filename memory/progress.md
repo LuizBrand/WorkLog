@@ -6,10 +6,11 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- [ ] (none — waiting on next instruction from the user)
+- [ ] (none — Phase 3 shipped; awaiting next instruction from the user)
 
 ## Session log
 - [x] 2026-04-25 — initialized `memory/` snapshot of current project state (agents, plan, progress, verify, gotchas). Committed as `b8c02da` `docs(memory): seed agent memory snapshot`. Working-tree change to `.gitignore` is pre-existing from before this session and not part of this commit.
+- [x] 2026-04-25 — MVP Phase 3 (`GET /users/me`) implemented TDD. Added `UserControllerTest$getMe` (2 tests: 200 OK + principal-passthrough), `UserService.getMe(User)`, `GET /users/me` on `UserController` with `@AuthenticationPrincipal`, and matching `UserControllerDocs#getMe` operation. Suite at 175/175 green. Committed as `0b65888` `feat(users): add GET /users/me endpoint`.
 
 ## Completed (consolidated from current code state)
 
@@ -77,12 +78,13 @@ changed without an update here.
 
 ## Backlog (next up)
 
-### MVP v1 — Phase 3 (next planned phase)
-- [ ] `UserControllerTest$GetMe` — write tests first (TDD) for 200 OK with the principal's data
-- [ ] Implement `GET /users/me` in `UserController`, returning `UserResponse` from `@AuthenticationPrincipal`
-- [ ] (optional) Add `UserService.getMe(User)` for consistency with other endpoints
-- [ ] `./mvnw test` green
-- [ ] Commit `feat(users): add GET /users/me endpoint`
+### MVP v1 — Phase 3 (shipped — commit `0b65888`)
+- [x] `UserControllerTest$getMe` — 2 tests written first (TDD), failed for the right reason (`getMe` symbol missing), then turned green
+- [x] `UserService.getMe(User)` added (delegates to `userMapper.toUserResponse`)
+- [x] `GET /users/me` in `UserController` with `@AuthenticationPrincipal User currentUser`
+- [x] `UserControllerDocs#getMe` documented (200 + 401)
+- [x] `./mvnw test` green — 175/175
+- [x] Commit `feat(users): add GET /users/me endpoint` → `0b65888`
 
 ### MVP v1 — optional later phases (only after user confirmation)
 - [ ] Phase 4 — `POST /users/me/change-password` + invalidation of refresh tokens

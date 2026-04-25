@@ -62,12 +62,14 @@ Confirmed from the controllers in `src/main/java/.../`:
 
 ## Current Phase
 
-Backend MVP v1 — Phases 1 and 2 of `.claude/mvp-v1-plan.md` shipped (commits
-`a3a8b72` and `c812722`). Next planned phase: **Phase 3 — `GET /users/me`**.
+Backend MVP v1 — Phases 1, 2, and 3 of `.claude/mvp-v1-plan.md` shipped
+(commits `a3a8b72`, `c812722`, `0b65888`). MVP frontend-blocker phases are
+complete. Optional Phases 4–6 are available; awaiting user direction on
+whether to continue or stop here.
 
 ## Vertical Slices
 
-### Slice A: `GET /users/me` (Phase 3 of MVP v1) — pending
+### Slice A: `GET /users/me` (Phase 3 of MVP v1) — shipped (`0b65888`)
 - **API**: add `@GetMapping("/me")` on `UserController` taking
   `@AuthenticationPrincipal User currentUser` and returning `UserResponse`.
 - **Service** (optional, for consistency): `UserService.getMe(User)` that
