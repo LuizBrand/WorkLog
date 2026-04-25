@@ -47,6 +47,10 @@ public class UserService {
 
     }
 
+    public UserResponse getMe(User currentUser) {
+        return userMapper.toUserResponse(currentUser);
+    }
+
     public User findEntityByPublicId(UUID publicId) {
         return userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new UserNotFoundException("User with public ID: " + publicId + " not found"));

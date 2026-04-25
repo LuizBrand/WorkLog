@@ -27,6 +27,15 @@ public interface UserControllerDocs {
     })
     ResponseEntity<List<UserResponse>> findAllUsers();
 
+    @Operation(summary = "Buscar usuário autenticado",
+            description = "Retorna os dados do usuário autenticado (a partir do token JWT).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Dados do usuário autenticado",
+                    content = @Content(schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    ResponseEntity<UserResponse> getMe(User currentUser);
+
     @Operation(summary = "Buscar usuário por ID",
             description = "Retorna um usuário específico pelo seu publicId (UUID).")
     @ApiResponses({

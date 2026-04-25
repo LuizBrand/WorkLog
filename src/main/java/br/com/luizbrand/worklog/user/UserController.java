@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.user;
 import br.com.luizbrand.worklog.user.dto.UserResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,11 @@ public class UserController implements UserControllerDocs {
     @GetMapping("/")
     public ResponseEntity<List<UserResponse>> findAllUsers() {
         return ResponseEntity.ok(userService.findAll());
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getMe(@AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(userService.getMe(currentUser));
     }
 
     @GetMapping("/{publicId}")

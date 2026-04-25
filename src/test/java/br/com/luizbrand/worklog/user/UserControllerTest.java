@@ -5,9 +5,13 @@ import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
 import br.com.luizbrand.worklog.role.dto.RoleResponse;
 import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
 import br.com.luizbrand.worklog.role.enums.RoleName;
+import br.com.luizbrand.worklog.support.UserTestBuilder;
 import br.com.luizbrand.worklog.user.dto.UserResponse;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
@@ -18,6 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -132,6 +138,57 @@ class UserControllerTest {
                     .andExpect(jsonPath("$.message").value(notFoundExpectedMessage));
         }
 
+    }
+
+    @Nested
+    @DisplayName("Endpoint: GET /users/me")
+    class getMe {
+
+        private User authenticatedUser;
+
+        @BeforeEach
+        void authenticate() {
+            authenticatedUser = UserTestBuilder.aUser()
+                    .withPublicId(UUID.fromString(userResponse.publicId()))
+                    .withName(userResponse.name())
+                    .withEmail(userResponse.email())
+                    .build();
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken(
+                            authenticatedUser, null, authenticatedUser.getAuthorities()));
+        }
+
+        @AfterEach
+        void clearAuthentication() {
+            SecurityContextHolder.clearContext();
+        }
+
+        @Test
+        @DisplayName("Should return 200 OK with the authenticated principal's data")
+        void shouldReturnOkWithAuthenticatedUserData() throws Exception {
+
+            when(userService.getMe(any(User.class))).thenReturn(userResponse);
+
+            mockMvc.perform(get("/users/me").accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.publicId").value(userResponse.publicId()))
+                    .andExpect(jsonPath("$.email").value(userResponse.email()))
+                    .andExpect(jsonPath("$.name").value(userResponse.name()))
+                    .andExpect(jsonPath("$.roles[0].role").value(RoleName.USER.toString()));
+        }
+
+        @Test
+        @DisplayName("Should pass the authenticated principal through to the service")
+        void shouldPassAuthenticatedPrincipalThroughToService() throws Exception {
+
+            when(userService.getMe(eq(authenticatedUser))).thenReturn(userResponse);
+
+            mockMvc.perform(get("/users/me").accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
+
+            verify(userService, times(1)).getMe(eq(authenticatedUser));
+        }
     }
 
     @Nested
