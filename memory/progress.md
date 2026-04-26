@@ -6,14 +6,14 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- [ ] MVP Phase 5 (`DELETE /tickets/{publicId}` soft delete + `StatusFiltro visibility` filter, ADMIN-only) — code complete, suite green at 195/195, awaiting user approval to commit (`feat(tickets): add soft-delete and admin-only deleted visibility`).
+- (none — Phase 5 shipped; MVP v1 plan exhausted, Phase 6 discarded)
 
 ## Session log
 - [x] 2026-04-25 — MVP Phase 5 implemented TDD. Phase 6 (default sort) discarded per user direction; cleanup applied to `.claude/mvp-v1-plan.md`, `memory/plan.md`, `memory/progress.md`. Naming-collision resolved by user decision: new field is `StatusFiltro visibility` on `TicketFiltersParams` (not `status`), wire param `?visibility=ATIVO|INATIVO|TODOS` — keeps existing `?status=PENDING` (TicketStatus) intact.
   - Tests first: extended `TicketSpecificationTest` (+3 visibility cases), `TicketServiceTest` (+5 FindAllTickets visibility/role-gating cases incl. helper, +2 SoftDeleteTicket cases), `TicketControllerTest` (+2 DeleteTicket cases, principal+visibility round-trip in FindAllTickets). Watched compile fail naming missing `findAll(.., User)` and `softDeleteTicket`, then watched 4 service tests fail on assertion before role gating.
   - Production: `TicketFiltersParams.visibility` added (8th field). `TicketSpecification` adds `equal(isEnabled, true|false)` predicate per visibility. `TicketService.findAll(filters, pageable, currentUser)` computes effective visibility — non-ADMIN forced to `ATIVO`, ADMIN preserves caller, ADMIN null defaults to `ATIVO`. `TicketService.softDeleteTicket(UUID)` (404 + setIsEnabled(false) + save). `TicketController#findAllTickets` gains `@AuthenticationPrincipal`; new `DELETE /tickets/{publicId}` with `@PreAuthorize("hasRole('ADMIN')")` returns 204. `TicketControllerDocs` updated for both.
   - Suite: 195/195 green (183 → 195, +12 = 3 spec + 7 service + 2 controller).
-  - Awaiting user approval to commit `feat(tickets): add soft-delete and admin-only deleted visibility` (no Co-Authored-By trailer).
+  - Shipped as `63d5225` `feat(tickets): add soft-delete and admin-only deleted visibility`; plan/memory cleanup committed as `7058871` `docs(memory): record Phase 5 shipped, drop Phase 6`.
 - [x] 2026-04-25 — initialized `memory/` snapshot of current project state (agents, plan, progress, verify, gotchas). Committed as `b8c02da` `docs(memory): seed agent memory snapshot`. Working-tree change to `.gitignore` is pre-existing from before this session and not part of this commit.
 - [x] 2026-04-25 — MVP Phase 3 (`GET /users/me`) implemented TDD. Added `UserControllerTest$getMe` (2 tests: 200 OK + principal-passthrough), `UserService.getMe(User)`, `GET /users/me` on `UserController` with `@AuthenticationPrincipal`, and matching `UserControllerDocs#getMe` operation. Suite at 175/175 green. Committed as `0b65888` `feat(users): add GET /users/me endpoint`.
 - [x] 2026-04-25 — MVP Phase 4 (`POST /users/me/change-password`) implemented TDD per `.claude/mvp-v1-phases-4-5.md`:

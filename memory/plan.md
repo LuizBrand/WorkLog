@@ -62,11 +62,10 @@ Confirmed from the controllers in `src/main/java/.../`:
 
 ## Current Phase
 
-Backend MVP v1 — Phases 1–4 shipped
-(commits `a3a8b72`, `c812722`, `0b65888`, `be684bc`). Phase 5
-(`DELETE /tickets/{publicId}` soft delete + `StatusFiltro visibility`
-flag, ADMIN-only) is in progress per `.claude/mvp-v1-phases-4-5.md`.
-Phase 6 (default sort) was discarded per user direction.
+Backend MVP v1 — Phases 1–5 shipped
+(commits `a3a8b72`, `c812722`, `0b65888`, `be684bc`, `63d5225`). Phase 6
+(default sort) was discarded per user direction. The MVP v1 plan is
+exhausted; awaiting user direction on next initiative.
 
 ## Vertical Slices
 
