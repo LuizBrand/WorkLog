@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,8 +31,17 @@ public class TicketController implements TicketControllerDocs {
     }
 
     @GetMapping
-    public ResponseEntity<Page<TicketSummary>> findAllTickets(TicketFiltersParams filters, Pageable pageable) {
-        return ResponseEntity.ok(ticketService.findAll(filters, pageable));
+    public ResponseEntity<Page<TicketSummary>> findAllTickets(TicketFiltersParams filters,
+                                                              Pageable pageable,
+                                                              @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(ticketService.findAll(filters, pageable, currentUser));
+    }
+
+    @DeleteMapping("/{publicId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteTicket(@PathVariable UUID publicId) {
+        ticketService.softDeleteTicket(publicId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/create")

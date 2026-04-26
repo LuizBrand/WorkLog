@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.tickets.dto;
 
+import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -13,6 +14,7 @@ public record TicketFiltersParams(
         UUID systemId,
         UUID userId,
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdFrom,
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo,
+        StatusFiltro visibility
 ) {
 }

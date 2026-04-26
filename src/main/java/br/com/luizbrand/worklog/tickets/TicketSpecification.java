@@ -1,6 +1,7 @@
 package br.com.luizbrand.worklog.tickets;
 
 import br.com.luizbrand.worklog.client.Client;
+import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.tickets.dto.TicketFiltersParams;
 import br.com.luizbrand.worklog.user.User;
@@ -51,6 +52,12 @@ public class TicketSpecification {
             if (filters.createdTo() != null) {
                 predicates.add(criteriaBuilder.lessThan(
                         root.get("createdAt"), filters.createdTo().plusDays(1).atStartOfDay()));
+            }
+
+            if (filters.visibility() == StatusFiltro.ATIVO) {
+                predicates.add(criteriaBuilder.equal(root.get("isEnabled"), true));
+            } else if (filters.visibility() == StatusFiltro.INATIVO) {
+                predicates.add(criteriaBuilder.equal(root.get("isEnabled"), false));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

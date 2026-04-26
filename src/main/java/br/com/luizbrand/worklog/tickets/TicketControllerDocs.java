@@ -25,13 +25,28 @@ import java.util.UUID;
 public interface TicketControllerDocs {
 
     @Operation(summary = "Listar tickets",
-            description = "Retorna uma página de tickets (resumo) com filtros opcionais por título, status, cliente, sistema, usuário e faixa de datas de criação.")
+            description = "Retorna uma página de tickets (resumo) com filtros opcionais por título, status, cliente, sistema, usuário, faixa de datas de criação e visibilidade. "
+                    + "O parâmetro `visibility` (ATIVO/INATIVO/TODOS) só é honrado para usuários ADMIN; usuários comuns sempre veem apenas tickets ativos.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Página de tickets",
                     content = @Content(schema = @Schema(implementation = TicketSummary.class))),
             @ApiResponse(responseCode = "401", description = "Não autenticado")
     })
-    ResponseEntity<Page<TicketSummary>> findAllTickets(TicketFiltersParams filters, Pageable pageable);
+    ResponseEntity<Page<TicketSummary>> findAllTickets(TicketFiltersParams filters,
+                                                       Pageable pageable,
+                                                       @Parameter(hidden = true) User currentUser);
+
+    @Operation(summary = "Soft-delete de ticket",
+            description = "Marca o ticket como inativo (`isEnabled = false`). Operação reservada para usuários ADMIN. O histórico de auditoria é preservado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Ticket desativado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Ticket não encontrado",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer role ADMIN")
+    })
+    ResponseEntity<Void> deleteTicket(
+            @Parameter(description = "ID público do ticket (UUID)", required = true) UUID publicId);
 
     @Operation(summary = "Criar ticket",
             description = "Cria um novo ticket de suporte. O cliente e o sistema devem estar ativos. O usuário responsável é opcional.")

@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.tickets;
 import br.com.luizbrand.worklog.auth.AuthFilter;
 import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
 import br.com.luizbrand.worklog.client.dto.ClientSummary;
+import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import br.com.luizbrand.worklog.exception.NotFound.TicketNotFoundException;
 import br.com.luizbrand.worklog.support.UserTestBuilder;
 import br.com.luizbrand.worklog.system.dto.SystemResponse;
@@ -51,6 +52,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -269,6 +271,18 @@ class TicketControllerTest {
     @DisplayName("Endpoint: GET /tickets")
     class FindAllTickets {
 
+        @BeforeEach
+        void authenticate() {
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken(
+                            authenticatedUser, null, authenticatedUser.getAuthorities()));
+        }
+
+        @AfterEach
+        void clearAuthentication() {
+            SecurityContextHolder.clearContext();
+        }
+
         @Test
         @DisplayName("Should return 200 OK with a page of summaries and pass filters and paging to the service")
         void shouldReturnPagedSummaries() throws Exception {
@@ -287,7 +301,7 @@ class TicketControllerTest {
             Pageable pageable = PageRequest.of(0, 20, Sort.by("createdAt").descending());
             Page<TicketSummary> page = new PageImpl<>(List.of(summary), pageable, 1);
 
-            when(ticketService.findAll(any(TicketFiltersParams.class), any(Pageable.class)))
+            when(ticketService.findAll(any(TicketFiltersParams.class), any(Pageable.class), any(User.class)))
                     .thenReturn(page);
 
             mockMvc.perform(get("/tickets")
@@ -298,6 +312,7 @@ class TicketControllerTest {
                             .param("userId", userPublicId.toString())
                             .param("createdFrom", "2026-04-01")
                             .param("createdTo", "2026-04-30")
+                            .param("visibility", "TODOS")
                             .param("page", "0")
                             .param("size", "20")
                             .param("sort", "createdAt,desc")
@@ -314,7 +329,9 @@ class TicketControllerTest {
 
             ArgumentCaptor<TicketFiltersParams> filtersCaptor = ArgumentCaptor.forClass(TicketFiltersParams.class);
             ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-            verify(ticketService, times(1)).findAll(filtersCaptor.capture(), pageableCaptor.capture());
+            ArgumentCaptor<User> principalCaptor = ArgumentCaptor.forClass(User.class);
+            verify(ticketService, times(1))
+                    .findAll(filtersCaptor.capture(), pageableCaptor.capture(), principalCaptor.capture());
 
             TicketFiltersParams filters = filtersCaptor.getValue();
             assertThat(filters.title()).isEqualTo("Login");
@@ -324,24 +341,53 @@ class TicketControllerTest {
             assertThat(filters.userId()).isEqualTo(userPublicId);
             assertThat(filters.createdFrom()).isEqualTo(LocalDate.of(2026, 4, 1));
             assertThat(filters.createdTo()).isEqualTo(LocalDate.of(2026, 4, 30));
+            assertThat(filters.visibility()).isEqualTo(StatusFiltro.TODOS);
 
             Pageable captured = pageableCaptor.getValue();
             assertThat(captured.getPageNumber()).isEqualTo(0);
             assertThat(captured.getPageSize()).isEqualTo(20);
             assertThat(captured.getSort().getOrderFor("createdAt")).isNotNull();
             assertThat(captured.getSort().getOrderFor("createdAt").isDescending()).isTrue();
+
+            assertThat(principalCaptor.getValue()).isEqualTo(authenticatedUser);
         }
 
         @Test
         @DisplayName("Should return 200 OK with an empty page when no ticket matches")
         void shouldReturnEmptyPage() throws Exception {
-            when(ticketService.findAll(any(TicketFiltersParams.class), any(Pageable.class)))
+            when(ticketService.findAll(any(TicketFiltersParams.class), any(Pageable.class), any(User.class)))
                     .thenReturn(Page.empty(PageRequest.of(0, 20)));
 
             mockMvc.perform(get("/tickets").accept(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content").isArray())
                     .andExpect(jsonPath("$.totalElements").value(0));
+        }
+    }
+
+    @Nested
+    @DisplayName("Endpoint: DELETE /tickets/{publicId}")
+    class DeleteTicket {
+
+        @Test
+        @DisplayName("Should return 204 No Content when the ticket is soft-deleted")
+        void shouldReturn204OnSuccess() throws Exception {
+            mockMvc.perform(delete("/tickets/{publicId}", ticketPublicId))
+                    .andExpect(status().isNoContent());
+
+            verify(ticketService, times(1)).softDeleteTicket(ticketPublicId);
+        }
+
+        @Test
+        @DisplayName("Should return 404 Not Found when the ticket does not exist")
+        void shouldReturn404WhenMissing() throws Exception {
+            String message = "Ticket not found with publicId: " + ticketPublicId;
+            org.mockito.Mockito.doThrow(new TicketNotFoundException(message))
+                    .when(ticketService).softDeleteTicket(ticketPublicId);
+
+            mockMvc.perform(delete("/tickets/{publicId}", ticketPublicId))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value(message));
         }
     }
 

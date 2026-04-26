@@ -2,6 +2,7 @@ package br.com.luizbrand.worklog.tickets;
 
 import br.com.luizbrand.worklog.client.Client;
 import br.com.luizbrand.worklog.client.ClientService;
+import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import br.com.luizbrand.worklog.exception.NotFound.TicketNotFoundException;
 import br.com.luizbrand.worklog.system.SystemService;
 import br.com.luizbrand.worklog.system.Systems;
@@ -14,6 +15,7 @@ import br.com.luizbrand.worklog.user.User;
 import br.com.luizbrand.worklog.user.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,9 +58,44 @@ public class TicketService {
         return ticketMapper.toResponse(ticketRepository.save(ticket));
     }
 
-    public Page<TicketSummary> findAll(TicketFiltersParams filters, Pageable pageable) {
-        return ticketRepository.findAll(TicketSpecification.findByFilter(filters), pageable)
+    public Page<TicketSummary> findAll(TicketFiltersParams filters, Pageable pageable, User currentUser) {
+        TicketFiltersParams effective = applyVisibilityRules(filters, currentUser);
+        return ticketRepository.findAll(TicketSpecification.findByFilter(effective), pageable)
                 .map(ticketMapper::toSummary);
+    }
+
+    private TicketFiltersParams applyVisibilityRules(TicketFiltersParams filters, User currentUser) {
+        StatusFiltro effective;
+        if (isAdmin(currentUser)) {
+            effective = filters.visibility() != null ? filters.visibility() : StatusFiltro.ATIVO;
+        } else {
+            effective = StatusFiltro.ATIVO;
+        }
+        if (effective == filters.visibility()) {
+            return filters;
+        }
+        return new TicketFiltersParams(
+                filters.title(), filters.status(),
+                filters.clientId(), filters.systemId(), filters.userId(),
+                filters.createdFrom(), filters.createdTo(),
+                effective);
+    }
+
+    private boolean isAdmin(User currentUser) {
+        if (currentUser == null) {
+            return false;
+        }
+        return currentUser.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
+    }
+
+    @Transactional
+    public void softDeleteTicket(UUID publicId) {
+        Ticket ticket = ticketRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new TicketNotFoundException("Ticket not found with publicId: " + publicId));
+        ticket.setIsEnabled(false);
+        ticketRepository.save(ticket);
     }
 
     public TicketResponse findTicketByPublicId(UUID publicId) {

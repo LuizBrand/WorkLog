@@ -1,6 +1,7 @@
 package br.com.luizbrand.worklog.tickets;
 
 import br.com.luizbrand.worklog.client.Client;
+import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.tickets.dto.TicketFiltersParams;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
@@ -83,7 +84,7 @@ class TicketSpecificationTest {
     @Test
     @DisplayName("Should add no predicates when all filters are null")
     void shouldAddNoPredicatesWhenAllFiltersNull() {
-        apply(new TicketFiltersParams(null, null, null, null, null, null, null));
+        apply(new TicketFiltersParams(null, null, null, null, null, null, null, null));
 
         verify(criteriaBuilder, never()).like(any(), anyString());
         verify(criteriaBuilder, never()).equal(any(), any());
@@ -95,7 +96,7 @@ class TicketSpecificationTest {
     @Test
     @DisplayName("Should skip the title predicate when title is an empty string")
     void shouldSkipTitlePredicateWhenEmpty() {
-        apply(new TicketFiltersParams("", null, null, null, null, null, null));
+        apply(new TicketFiltersParams("", null, null, null, null, null, null, null));
 
         verify(criteriaBuilder, never()).like(any(), anyString());
     }
@@ -103,7 +104,7 @@ class TicketSpecificationTest {
     @Test
     @DisplayName("Should add a case-insensitive LIKE predicate when title is provided")
     void shouldAddCaseInsensitiveLikeWhenTitleProvided() {
-        apply(new TicketFiltersParams("Login", null, null, null, null, null, null));
+        apply(new TicketFiltersParams("Login", null, null, null, null, null, null, null));
 
         verify(criteriaBuilder).lower(attributePath);
         verify(criteriaBuilder, times(1)).like(eq(loweredTitle), eq("%login%"));
@@ -112,7 +113,7 @@ class TicketSpecificationTest {
     @Test
     @DisplayName("Should add equal(status, value) when status is provided")
     void shouldFilterByStatus() {
-        apply(new TicketFiltersParams(null, TicketStatus.PENDING, null, null, null, null, null));
+        apply(new TicketFiltersParams(null, TicketStatus.PENDING, null, null, null, null, null, null));
 
         verify(root).get("status");
         verify(criteriaBuilder, times(1)).equal(attributePath, TicketStatus.PENDING);
@@ -123,7 +124,7 @@ class TicketSpecificationTest {
     void shouldFilterByClientId() {
         UUID clientId = UUID.randomUUID();
 
-        apply(new TicketFiltersParams(null, null, clientId, null, null, null, null));
+        apply(new TicketFiltersParams(null, null, clientId, null, null, null, null, null));
 
         verify(root, times(1)).join("client");
         verify(clientJoin).get("publicId");
@@ -135,7 +136,7 @@ class TicketSpecificationTest {
     void shouldFilterBySystemId() {
         UUID systemId = UUID.randomUUID();
 
-        apply(new TicketFiltersParams(null, null, null, systemId, null, null, null));
+        apply(new TicketFiltersParams(null, null, null, systemId, null, null, null, null));
 
         verify(root, times(1)).join("system");
         verify(systemJoin).get("publicId");
@@ -147,7 +148,7 @@ class TicketSpecificationTest {
     void shouldFilterByUserId() {
         UUID userId = UUID.randomUUID();
 
-        apply(new TicketFiltersParams(null, null, null, null, userId, null, null));
+        apply(new TicketFiltersParams(null, null, null, null, userId, null, null, null));
 
         verify(root, times(1)).join("user");
         verify(userJoin).get("publicId");
@@ -159,7 +160,7 @@ class TicketSpecificationTest {
     void shouldFilterByCreatedFromOnly() {
         LocalDate from = LocalDate.of(2026, 4, 1);
 
-        apply(new TicketFiltersParams(null, null, null, null, null, from, null));
+        apply(new TicketFiltersParams(null, null, null, null, null, from, null, null));
 
         verify(root).get("createdAt");
         verify(criteriaBuilder, times(1))
@@ -172,7 +173,7 @@ class TicketSpecificationTest {
     void shouldFilterByCreatedToOnly() {
         LocalDate to = LocalDate.of(2026, 4, 30);
 
-        apply(new TicketFiltersParams(null, null, null, null, null, null, to));
+        apply(new TicketFiltersParams(null, null, null, null, null, null, to, null));
 
         verify(root).get("createdAt");
         verify(criteriaBuilder, times(1))
@@ -187,11 +188,39 @@ class TicketSpecificationTest {
         LocalDate from = LocalDate.of(2026, 4, 1);
         LocalDate to = LocalDate.of(2026, 4, 30);
 
-        apply(new TicketFiltersParams(null, null, null, null, null, from, to));
+        apply(new TicketFiltersParams(null, null, null, null, null, from, to, null));
 
         verify(criteriaBuilder, times(1))
                 .greaterThanOrEqualTo(any(Expression.class), eq(from.atStartOfDay()));
         verify(criteriaBuilder, times(1))
                 .lessThan(any(Expression.class), eq(to.plusDays(1).atStartOfDay()));
+    }
+
+    @Test
+    @DisplayName("Should add equal(isEnabled, true) when visibility is ATIVO")
+    void shouldFilterByVisibilityAtivo() {
+        apply(new TicketFiltersParams(null, null, null, null, null, null, null, StatusFiltro.ATIVO));
+
+        verify(root).get("isEnabled");
+        verify(criteriaBuilder, times(1)).equal(attributePath, true);
+    }
+
+    @Test
+    @DisplayName("Should add equal(isEnabled, false) when visibility is INATIVO")
+    void shouldFilterByVisibilityInativo() {
+        apply(new TicketFiltersParams(null, null, null, null, null, null, null, StatusFiltro.INATIVO));
+
+        verify(root).get("isEnabled");
+        verify(criteriaBuilder, times(1)).equal(attributePath, false);
+    }
+
+    @Test
+    @DisplayName("Should add no isEnabled predicate when visibility is TODOS")
+    void shouldNotFilterIsEnabledWhenVisibilityTodos() {
+        apply(new TicketFiltersParams(null, null, null, null, null, null, null, StatusFiltro.TODOS));
+
+        verify(root, never()).get("isEnabled");
+        verify(criteriaBuilder, never()).equal(any(), eq(true));
+        verify(criteriaBuilder, never()).equal(any(), eq(false));
     }
 }
