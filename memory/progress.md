@@ -6,9 +6,14 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- [ ] MVP Phase 4 (`POST /users/me/change-password`) — code complete, suite green at 183/183, awaiting user approval to commit (`feat(users): add POST /users/me/change-password`).
+- [ ] MVP Phase 5 (`DELETE /tickets/{publicId}` soft delete + `StatusFiltro visibility` filter, ADMIN-only) — code complete, suite green at 195/195, awaiting user approval to commit (`feat(tickets): add soft-delete and admin-only deleted visibility`).
 
 ## Session log
+- [x] 2026-04-25 — MVP Phase 5 implemented TDD. Phase 6 (default sort) discarded per user direction; cleanup applied to `.claude/mvp-v1-plan.md`, `memory/plan.md`, `memory/progress.md`. Naming-collision resolved by user decision: new field is `StatusFiltro visibility` on `TicketFiltersParams` (not `status`), wire param `?visibility=ATIVO|INATIVO|TODOS` — keeps existing `?status=PENDING` (TicketStatus) intact.
+  - Tests first: extended `TicketSpecificationTest` (+3 visibility cases), `TicketServiceTest` (+5 FindAllTickets visibility/role-gating cases incl. helper, +2 SoftDeleteTicket cases), `TicketControllerTest` (+2 DeleteTicket cases, principal+visibility round-trip in FindAllTickets). Watched compile fail naming missing `findAll(.., User)` and `softDeleteTicket`, then watched 4 service tests fail on assertion before role gating.
+  - Production: `TicketFiltersParams.visibility` added (8th field). `TicketSpecification` adds `equal(isEnabled, true|false)` predicate per visibility. `TicketService.findAll(filters, pageable, currentUser)` computes effective visibility — non-ADMIN forced to `ATIVO`, ADMIN preserves caller, ADMIN null defaults to `ATIVO`. `TicketService.softDeleteTicket(UUID)` (404 + setIsEnabled(false) + save). `TicketController#findAllTickets` gains `@AuthenticationPrincipal`; new `DELETE /tickets/{publicId}` with `@PreAuthorize("hasRole('ADMIN')")` returns 204. `TicketControllerDocs` updated for both.
+  - Suite: 195/195 green (183 → 195, +12 = 3 spec + 7 service + 2 controller).
+  - Awaiting user approval to commit `feat(tickets): add soft-delete and admin-only deleted visibility` (no Co-Authored-By trailer).
 - [x] 2026-04-25 — initialized `memory/` snapshot of current project state (agents, plan, progress, verify, gotchas). Committed as `b8c02da` `docs(memory): seed agent memory snapshot`. Working-tree change to `.gitignore` is pre-existing from before this session and not part of this commit.
 - [x] 2026-04-25 — MVP Phase 3 (`GET /users/me`) implemented TDD. Added `UserControllerTest$getMe` (2 tests: 200 OK + principal-passthrough), `UserService.getMe(User)`, `GET /users/me` on `UserController` with `@AuthenticationPrincipal`, and matching `UserControllerDocs#getMe` operation. Suite at 175/175 green. Committed as `0b65888` `feat(users): add GET /users/me endpoint`.
 - [x] 2026-04-25 — MVP Phase 4 (`POST /users/me/change-password`) implemented TDD per `.claude/mvp-v1-phases-4-5.md`:
@@ -20,7 +25,7 @@ changed without an update here.
   - Aligned `ChangePasswordRequest#newPassword` validation with the existing `RegisterRequest#password` rule (`@NotBlank` + `@Size(min=8)` + `@Pattern("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$")` with the same Portuguese messages) per user request — keep `currentPassword` and `refreshToken` as plain `@NotBlank`. Updated the controller happy-path fixture to `NewStrong1Password` so it satisfies the new pattern.
   - User explicitly chose to keep the `@Lazy PasswordEncoder` workaround instead of extracting `PasswordEncoder` into its own `@Configuration`. Decision recorded; no architectural change to `SecurityConfig`.
   - Suite: 183/183 green (175 → 183, +8 = 4 service + 4 controller).
-  - Awaiting user approval to commit `feat(users): add POST /users/me/change-password` (no Co-Authored-By trailer per project memory).
+  - Shipped as `be684bc` `feat(users): add POST /users/me/change-password`; memory commit `65294ab`.
 
 ## Completed (consolidated from current code state)
 
@@ -96,10 +101,11 @@ changed without an update here.
 - [x] `./mvnw test` green — 175/175
 - [x] Commit `feat(users): add GET /users/me endpoint` → `0b65888`
 
-### MVP v1 — optional later phases (only after user confirmation)
-- [ ] Phase 4 — `POST /users/me/change-password` + invalidation of refresh tokens
-- [ ] Phase 5 — `DELETE /tickets/{publicId}` (soft delete) with `isEnabled = true` as the default list filter
-- [ ] Phase 6 — `GET /tickets` defaulting to `Sort.by("updatedAt").descending()` when no sort supplied
+### MVP v1 — Phase 5 (in flight, per `.claude/mvp-v1-phases-4-5.md`)
+- [ ] Phase 5 — `DELETE /tickets/{publicId}` (soft delete, ADMIN-only) + `StatusFiltro visibility` filter on `GET /tickets` (non-ADMIN forced to `ATIVO`; ADMIN default `ATIVO` when `null`)
+
+### Discarded
+- Phase 6 — `GET /tickets` default sort `updatedAt DESC` — dropped per user direction (2026-04-25)
 
 ### Test coverage track
 - [ ] Confirm with the user whether `.claude/test-plan.md` (referenced in user-level memory) still applies, or if it was folded into `.claude/mvp-v1-plan.md`

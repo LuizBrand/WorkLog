@@ -87,9 +87,6 @@ Estado inicial: commit `07e410b`, 150/150 testes verdes.
 ### Fase 5 (opcional) — `DELETE /tickets/{publicId}` (soft delete)
 - Marca `isEnabled = false`. Lista passa a filtrar só `isEnabled = true` por padrão.
 
-### Fase 6 (opcional) — ordenação por `updatedAt DESC` como default em `GET /tickets`
-- Usuário vê os tickets mais recentemente mexidos primeiro.
-
 ---
 
 ## Definição de pronto para cada fase

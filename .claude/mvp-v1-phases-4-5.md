@@ -15,6 +15,10 @@ Design decisions confirmed by user:
 - Phase 5 — ADMIN can see soft-deleted tickets via a query flag mirroring
   the `StatusFiltro` enum used in the `client` module
   (`ATIVO` / `INATIVO` / `TODOS`).
+- Phase 5 — the new `StatusFiltro` field on `TicketFiltersParams` is
+  named **`visibility`**, not `status`, because `TicketFiltersParams`
+  already has a `TicketStatus status` workflow filter and the two
+  concepts collide. `?visibility=ATIVO|INATIVO|TODOS` is the wire name.
 
 ---
 
@@ -96,9 +100,11 @@ history; ADMIN can still query the deleted rows when needed.
     `@PreAuthorize("hasRole('ADMIN')")`,
   - returns `204 No Content`.
 - `TicketControllerDocs#deleteTicket`: 204 / 404 / 401 / 403.
-- Extend `TicketFiltersParams` with `StatusFiltro status` (reuse the enum
-  already in `client/enums/StatusFiltro.java`).
-- Extend `TicketSpecification` to honor the status filter:
+- Extend `TicketFiltersParams` with `StatusFiltro visibility` (reuse the
+  enum already in `client/enums/StatusFiltro.java`). Named `visibility`
+  to avoid colliding with the existing `TicketStatus status` workflow
+  filter.
+- Extend `TicketSpecification` to honor the visibility filter:
   - `ATIVO` → `isEnabled = true`,
   - `INATIVO` → `isEnabled = false`,
   - `TODOS` or `null` → no `isEnabled` predicate (the service decides the
@@ -107,24 +113,26 @@ history; ADMIN can still query the deleted rows when needed.
   `@AuthenticationPrincipal User currentUser`, passed through to
   `TicketService.findAll(filters, pageable, currentUser)`.
 - `TicketService.findAll` enforces the role rule:
-  - if `currentUser` is **not** ADMIN, override `filters.status()` to
+  - if `currentUser` is **not** ADMIN, override `filters.visibility()` to
     `ATIVO` regardless of what was sent (so non-admins can never list
     soft-deleted tickets, even by passing `TODOS` or `INATIVO`).
-  - if ADMIN and `filters.status()` is `null`, default to `ATIVO` so the
-    pre-existing list endpoint behavior does not change for the common case.
+  - if ADMIN and `filters.visibility()` is `null`, default to `ATIVO` so
+    the pre-existing list endpoint behavior does not change for the
+    common case.
 - No schema changes, no migration (`isEnabled` is on `BaseEntity`).
 
 ### Tests (TDD order)
 1. `TicketSpecificationTest` — new cases:
-   - `status = ATIVO` adds the `isEnabled = true` predicate.
-   - `status = INATIVO` adds the `isEnabled = false` predicate.
-   - `status = TODOS` adds no predicate.
-   - `status = null` adds no predicate.
+   - `visibility = ATIVO` adds the `isEnabled = true` predicate.
+   - `visibility = INATIVO` adds the `isEnabled = false` predicate.
+   - `visibility = TODOS` adds no `isEnabled` predicate.
+   - `visibility = null` adds no `isEnabled` predicate (already covered
+     by the all-null baseline; keep that test honest).
 2. `TicketServiceTest` — extend `FindAllTickets`:
    - non-ADMIN principal forces the spec to receive `ATIVO` even when the
      caller passed `TODOS` / `INATIVO` / `null`.
-   - ADMIN principal preserves the caller's status, except `null` becomes
-     `ATIVO` (default).
+   - ADMIN principal preserves the caller's `visibility`, except `null`
+     becomes `ATIVO` (default).
 3. `TicketServiceTest` — new nested class `SoftDeleteTicket`:
    - happy path: sets `isEnabled = false` and persists.
    - 404 when the ticket does not exist.
@@ -136,13 +144,13 @@ history; ADMIN can still query the deleted rows when needed.
      existing `deactiveUserByPublicId` test's stance).
 5. `TicketControllerTest$findAllTickets` — extend:
    - the authenticated principal is passed through to the service.
-   - the `status` query param round-trips into `TicketFiltersParams`.
+   - the `visibility` query param round-trips into `TicketFiltersParams`.
 
 ### Verify
 - `./mvnw test` green.
 - Manual hit: ADMIN soft-deletes a ticket → `GET /tickets` (default) hides
-  it; `GET /tickets?status=TODOS` shows it; non-ADMIN gets only active
-  even with `?status=TODOS`.
+  it; `GET /tickets?visibility=TODOS` shows it; non-ADMIN gets only
+  active even with `?visibility=TODOS`.
 
 ### Commit
 `feat(tickets): add soft-delete and admin-only deleted visibility`

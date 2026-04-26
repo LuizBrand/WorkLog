@@ -62,10 +62,11 @@ Confirmed from the controllers in `src/main/java/.../`:
 
 ## Current Phase
 
-Backend MVP v1 — Phases 1, 2, and 3 of `.claude/mvp-v1-plan.md` shipped
-(commits `a3a8b72`, `c812722`, `0b65888`). MVP frontend-blocker phases are
-complete. Optional Phases 4–6 are available; awaiting user direction on
-whether to continue or stop here.
+Backend MVP v1 — Phases 1–4 shipped
+(commits `a3a8b72`, `c812722`, `0b65888`, `be684bc`). Phase 5
+(`DELETE /tickets/{publicId}` soft delete + `StatusFiltro visibility`
+flag, ADMIN-only) is in progress per `.claude/mvp-v1-phases-4-5.md`.
+Phase 6 (default sort) was discarded per user direction.
 
 ## Vertical Slices
 
@@ -87,17 +88,15 @@ whether to continue or stop here.
 - Tests for: wrong current password (422 / 401), success path, eviction of
   prior refresh tokens.
 
-### Slice C (optional, Phase 5): `DELETE /tickets/{publicId}` (soft delete)
-- Marks `isEnabled = false`. `GET /tickets` would default to filtering
-  `isEnabled = true`.
+### Slice C (Phase 5): `DELETE /tickets/{publicId}` (soft delete)
+- Marks `isEnabled = false` (`@PreAuthorize("hasRole('ADMIN')")`).
+- New `StatusFiltro visibility` field on `TicketFiltersParams` (named
+  `visibility` rather than `status` to avoid colliding with the existing
+  `TicketStatus status` workflow filter). `ATIVO` / `INATIVO` / `TODOS`.
+- Service forces `visibility = ATIVO` for non-ADMIN principals; for
+  ADMIN, `null` defaults to `ATIVO`.
 - Coverage in `TicketSpecification`, `TicketService`, and
   `TicketController` for the new route and the new default filter.
-
-### Slice D (optional, Phase 6): default sort on `GET /tickets`
-- When no `?sort=` is supplied, fall back to `updatedAt DESC` so the most
-  recently touched tickets appear first. Can live in the controller (default
-  `Pageable`) or in `TicketService.findAll` (build `Sort` when the incoming
-  `Pageable` is unsorted).
 
 ## Deferred / Out of Scope
 - Frontend (separate codebase; this repo is backend only).
@@ -111,8 +110,3 @@ whether to continue or stop here.
   `.claude/test-plan.md`, but only `.claude/mvp-v1-plan.md` exists in the
   repository today. Confirm with the user whether the coverage plan was
   consolidated into the MVP plan or simply not committed.
-- For Slice B, decide whether changing the password should invalidate the
-  user's refresh tokens only, or every active session.
-- For Slice C, decide whether soft-deleted tickets should still be visible
-  to ADMIN through a query flag (mirroring the `StatusFiltro` enum used in
-  the client module).
