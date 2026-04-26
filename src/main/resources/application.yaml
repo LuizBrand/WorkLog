@@ -12,3 +12,8 @@ spring:
     redis:
       repositories:
         enabled: true
+
+worklog:
+  cors:
+    allowed-origins:
+      - http://localhost:3000

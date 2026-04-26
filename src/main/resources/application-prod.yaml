@@ -7,3 +7,7 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+
+worklog:
+  cors:
+    allowed-origins: ${WORKLOG_CORS_ORIGINS}
