@@ -33,6 +33,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -185,6 +186,31 @@ class ClientControllerTest {
                             .content(objectMapper.writeValueAsString(clientRequest)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.enabled").value(false));
+        }
+    }
+
+    @Nested
+    @DisplayName("Endpoint: DELETE /clients/{publicId}")
+    class DeleteClient {
+
+        @Test
+        @DisplayName("Should return 204 No Content when the client is soft-deleted")
+        void shouldReturn204OnSuccess() throws Exception {
+            mockMvc.perform(delete("/clients/{publicId}", publicId))
+                    .andExpect(status().isNoContent());
+
+            org.mockito.Mockito.verify(clientService, org.mockito.Mockito.times(1)).softDeleteClient(publicId);
+        }
+
+        @Test
+        @DisplayName("Should return 404 Not Found when the client does not exist")
+        void shouldReturn404WhenMissing() throws Exception {
+            org.mockito.Mockito.doThrow(new ClientNotFoundException(notFoundExpectedMessage))
+                    .when(clientService).softDeleteClient(nonExistenId);
+
+            mockMvc.perform(delete("/clients/{publicId}", nonExistenId))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value(notFoundExpectedMessage));
         }
     }
 

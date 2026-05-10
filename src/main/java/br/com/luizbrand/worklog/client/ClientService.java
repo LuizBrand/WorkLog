@@ -99,6 +99,14 @@ public class ClientService {
                 .orElseThrow(() -> new ClientNotFoundException("Client with public ID: " + publicId + " not found"));
     }
 
+    @Transactional
+    public void softDeleteClient(UUID publicId) {
+        Client client = clientRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ClientNotFoundException("Client with public ID: " + publicId + " not found"));
+        client.setIsEnabled(false);
+        clientRepository.save(client);
+    }
+
     public Client findActiveClient(UUID publicId) {
         Client client = this.findByPublicId(publicId);
         if(!client.getIsEnabled()) {

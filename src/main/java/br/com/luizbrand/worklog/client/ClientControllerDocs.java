@@ -69,4 +69,16 @@ public interface ClientControllerDocs {
             ClientRequest clientRequest,
             @Parameter(description = "ID público do cliente (UUID)", required = true) UUID publicId);
 
+    @Operation(summary = "Excluir cliente (soft delete)",
+            description = "Marca o cliente como inativo (`isEnabled = false`). Restrito a ADMIN.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Cliente desativado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Cliente não encontrado",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão (ADMIN obrigatório)")
+    })
+    ResponseEntity<Void> softDeleteClient(
+            @Parameter(description = "ID público do cliente (UUID)", required = true) UUID publicId);
+
 }

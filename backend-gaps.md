@@ -11,15 +11,6 @@ Atualizar conforme novos gaps forem identificados durante o desenvolvimento.
 
 ## Clientes
 
-### 6. Sem endpoint `DELETE /clients/{publicId}`
-
-**Onde falta:** `clientes.ts` — nenhuma operação DELETE gerada pelo Orval
-**O que falta:** endpoint para excluir clientes
-**Impacto:** menu de ações da tabela de clientes não tem opção "Excluir"; apenas Ver detalhes e Editar disponíveis
-**Frontend:** `ClientTable` omite ação de exclusão por falta de suporte no backend
-
----
-
 ## Autenticação
 
 ### 7. Tokens via HttpOnly cookies em vez de corpo JSON

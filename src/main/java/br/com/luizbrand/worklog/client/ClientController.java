@@ -6,6 +6,7 @@ import br.com.luizbrand.worklog.client.dto.ClientResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,6 +42,13 @@ public class ClientController implements ClientControllerDocs {
     @PatchMapping("/{publicId}")
     public ResponseEntity<ClientResponse> updateClient(@RequestBody @Valid ClientRequest clientRequest, @PathVariable UUID publicId) {
         return ResponseEntity.ok( clientService.updateClient(publicId, clientRequest));
+    }
+
+    @DeleteMapping("/{publicId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> softDeleteClient(@PathVariable UUID publicId) {
+        clientService.softDeleteClient(publicId);
+        return ResponseEntity.noContent().build();
     }
 
 }

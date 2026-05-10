@@ -250,6 +250,39 @@ class ClientServiceTest {
     }
 
     @Nested
+    @DisplayName("Method: softDeleteClient()")
+    class SoftDeleteClient {
+
+        @Test
+        @DisplayName("Should set isEnabled to false and persist the client")
+        void shouldSoftDeleteWhenClientExists() {
+            Client existing = ClientTestBuilder.aClient().build();
+            existing.setIsEnabled(true);
+
+            when(clientRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
+            when(clientRepository.save(existing)).thenReturn(existing);
+
+            clientService.softDeleteClient(existing.getPublicId());
+
+            assertFalse(existing.getIsEnabled());
+            verify(clientRepository, times(1)).save(existing);
+        }
+
+        @Test
+        @DisplayName("Should throw ClientNotFoundException when the client does not exist")
+        void shouldThrowWhenMissing() {
+            UUID missing = UUID.randomUUID();
+            when(clientRepository.findByPublicId(missing)).thenReturn(Optional.empty());
+
+            ClientNotFoundException ex = assertThrows(ClientNotFoundException.class,
+                    () -> clientService.softDeleteClient(missing));
+
+            assertTrue(ex.getMessage().contains(missing.toString()));
+            verify(clientRepository, never()).save(any());
+        }
+    }
+
+    @Nested
     @DisplayName("Method: findActiveClient()")
     class FindActiveClient {
 
