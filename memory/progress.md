@@ -6,9 +6,16 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phases 1 (shipped `840813a`) and 2 (shipped `34b49f9`) done. Phases 3–7 still queued (priority field, system enabled, client enabled in PATCH, client soft-delete, HttpOnly cookies).
+- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phases 1 (shipped `840813a`), 2 (shipped `34b49f9`) and 3 (shipped `98431e5`) done. Phases 4–7 still queued (system enabled, client enabled in PATCH, client soft-delete, HttpOnly cookies).
 
 ## Session log
+- [x] 2026-05-10 — Backend gaps Phase 3 (`TicketPriority` field) implemented TDD. New `TicketPriority` enum (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`); `Ticket` entity carries `@Enumerated(STRING) @Column(nullable=false, length=20) priority`; `TicketRequest` adds `@NotNull priority`; `TicketUpdateRequest` adds nullable `priority` (PATCH); `TicketResponse` and `TicketSummary` expose `priority`; `TicketService.prepareNewTicket` and `updateTicketEntity` apply priority with PATCH semantics; `TicketLogManager.generateLogs` adds a `"priority"` STRING checkChange. Flyway migration `V11__add_priority_to_tickets.sql` adds the column nullable, backfills `MEDIUM`, then `SET NOT NULL`. `TicketTestBuilder` defaults priority to `MEDIUM` and exposes `withPriority(...)`.
+  - Tests first: behavior assertions (`shouldPersistPriorityOnCreate`, `shouldUpdatePriorityWhenProvided`, `shouldPreservePriorityWhenNullOnUpdate` in service; `shouldLogPriorityChange` in log manager; `shouldReturn400WhenPriorityMissingOnCreate` in controller; `priority` field asserted in `TicketMapperTest` toEntity/toResponse/toSummary plus controller GET-by-publicId and list-summaries). Adjusted every positional `new TicketRequest(...)` and `new TicketUpdateRequest(...)` site (12 ctor calls across 3 test files) to add the new arg.
+  - Test profile (H2 + `ddl-auto: create-drop`, Flyway disabled) auto-derives the priority column from the entity annotation, so the migration is dev/prod-only — local suite covers behavior, not the migration itself. (Note: the test YAML still says H2; user mentioned the actual test DB is Postgres — YAML may be stale, flagged as a follow-up cleanup.)
+  - Suite: 215/215 green (210 → 215, +5).
+  - V11 confirmed in dev: user booted via IntelliJ after a `docker compose down -v && up` to reset the postgres volume (existing volume had stale credentials from earlier init).
+  - Shipped as `98431e5` `feat(tickets): add priority field`.
+
 - [x] 2026-05-10 — Backend gaps Phase 2 (`TicketStatus.CANCELLED`) implemented TDD. Tests first: `TicketLogManagerTest.shouldLogStatusTransitionToCancelled`, `TicketServiceTest.shouldPersistCancelledStatusOnCreate`, `TicketServiceTest.shouldPersistCancelledStatusOnUpdate`, `TicketControllerTest.shouldAcceptCancelledStatusOnCreate`, `TicketControllerTest.shouldAcceptCancelledStatusOnUpdate`. Compile failed for the right reason (missing enum constant), then implementation appended `CANCELLED` to `TicketStatus`. No migration: `tickets.status` is `VARCHAR(50) NOT NULL` (V1) and Hibernate persists the enum name as-is. `backend-gaps.md` Gap 2 removed in the same slice.
   - Suite: 210/210 green (205 → 210, +5).
   - Shipped as `34b49f9` `feat(tickets): support CANCELLED status`.
