@@ -49,26 +49,27 @@ class CorsConfigTest {
     }
 
     @Test
-    @DisplayName("Should allow Authorization, Content-Type and Accept headers")
-    void shouldAllowAuthHeaders() {
+    @DisplayName("Should allow Content-Type and Accept headers but not Authorization (auth is via cookies now)")
+    void shouldAllowContentTypeAndAcceptHeaders() {
         CorsConfigurationSource source = sourceFor(List.of("http://localhost:3000"));
 
         CorsConfiguration cfg = source.getCorsConfiguration(requestFor("/tickets", "http://localhost:3000"));
 
         assertThat(cfg).isNotNull();
         assertThat(cfg.getAllowedHeaders())
-                .contains("Authorization", "Content-Type", "Accept");
+                .contains("Content-Type", "Accept")
+                .doesNotContain("Authorization");
     }
 
     @Test
-    @DisplayName("Should not enable allowCredentials so Bearer-token clients work without cookies")
-    void shouldNotAllowCredentials() {
+    @DisplayName("Should enable allowCredentials so browsers attach the HttpOnly cookies")
+    void shouldAllowCredentials() {
         CorsConfigurationSource source = sourceFor(List.of("http://localhost:3000"));
 
         CorsConfiguration cfg = source.getCorsConfiguration(requestFor("/tickets", "http://localhost:3000"));
 
         assertThat(cfg).isNotNull();
-        assertThat(cfg.getAllowCredentials()).isNotEqualTo(Boolean.TRUE);
+        assertThat(cfg.getAllowCredentials()).isEqualTo(Boolean.TRUE);
     }
 
     @Test

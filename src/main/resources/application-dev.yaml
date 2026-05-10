@@ -22,3 +22,7 @@ security:
     expiration: ${JWT_EXPIRATION}
     refresh-token:
       expiration: ${JWT_REFRESH_EXPIRATION}
+
+worklog:
+  cookies:
+    secure: false

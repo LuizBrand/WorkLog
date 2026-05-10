@@ -11,3 +11,5 @@ spring:
 worklog:
   cors:
     allowed-origins: ${WORKLOG_CORS_ORIGINS}
+  cookies:
+    secure: true

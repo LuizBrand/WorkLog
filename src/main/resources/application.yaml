@@ -17,3 +17,9 @@ worklog:
   cors:
     allowed-origins:
       - http://localhost:3000
+  cookies:
+    secure: false
+    same-site: Strict
+    access-name: worklog_access
+    refresh-name: worklog_refresh
+    refresh-path: /worklog/auth
