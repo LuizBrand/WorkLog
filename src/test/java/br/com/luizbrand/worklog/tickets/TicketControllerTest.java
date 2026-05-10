@@ -207,7 +207,7 @@ class TicketControllerTest {
         void shouldReturn200OnSuccess() throws Exception {
             TicketUpdateRequest request = new TicketUpdateRequest(
                     "Updated title", null, "Solved",
-                    TicketStatus.COMPLETED, LocalDateTime.of(2026, 4, 21, 12, 0));
+                    TicketStatus.COMPLETED, LocalDateTime.of(2026, 4, 21, 12, 0), null);
             TicketResponse updated = TicketResponse.builder()
                     .publicId(ticketPublicId)
                     .title("Updated title")
@@ -237,7 +237,7 @@ class TicketControllerTest {
         @DisplayName("Should return 404 Not Found when updating a non-existent ticket")
         void shouldReturn404WhenUpdatingMissingTicket() throws Exception {
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    "any", null, null, null, null);
+                    "any", null, null, null, null, null);
             String message = "Ticket not found with publicId: " + ticketPublicId;
             when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), any(User.class)))
                     .thenThrow(new TicketNotFoundException(message));
@@ -253,7 +253,7 @@ class TicketControllerTest {
         @DisplayName("Should pass the authenticated principal through to the service")
         void shouldPassAuthenticatedPrincipalThroughToService() throws Exception {
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    "Updated title", null, null, null, null);
+                    "Updated title", null, null, null, null, null);
             when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser)))
                     .thenReturn(ticketResponse);
 
@@ -264,6 +264,26 @@ class TicketControllerTest {
 
             verify(ticketService, times(1))
                     .updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser));
+        }
+
+        @Test
+        @DisplayName("Should forward the userId in the payload to the service")
+        void shouldForwardUserIdInPayload() throws Exception {
+            UUID newOwnerId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690daabcd");
+            TicketUpdateRequest request = new TicketUpdateRequest(
+                    null, null, null, null, null, newOwnerId);
+            when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser)))
+                    .thenReturn(ticketResponse);
+
+            mockMvc.perform(put("/tickets/update/{ticketPublicId}", ticketPublicId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk());
+
+            ArgumentCaptor<TicketUpdateRequest> captor = ArgumentCaptor.forClass(TicketUpdateRequest.class);
+            verify(ticketService, times(1))
+                    .updateTicket(eq(ticketPublicId), captor.capture(), eq(authenticatedUser));
+            assertThat(captor.getValue().userId()).isEqualTo(newOwnerId);
         }
     }
 

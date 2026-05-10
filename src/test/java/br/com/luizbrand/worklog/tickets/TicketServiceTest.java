@@ -250,7 +250,7 @@ class TicketServiceTest {
         void shouldThrowWhenTicketMissing() {
             UUID missing = UUID.randomUUID();
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    "New title", null, null, null, null);
+                    "New title", null, null, null, null, null);
 
             when(ticketRepository.findByPublicId(missing)).thenReturn(Optional.empty());
 
@@ -284,7 +284,7 @@ class TicketServiceTest {
 
             TicketUpdateRequest request = new TicketUpdateRequest(
                     "New title", null, "Fix applied",
-                    TicketStatus.COMPLETED, completion);
+                    TicketStatus.COMPLETED, completion, null);
 
             when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
             when(ticketRepository.save(existing)).thenReturn(existing);
@@ -299,6 +299,7 @@ class TicketServiceTest {
             assertThat(existing.getSolution()).isEqualTo("Fix applied");
             assertThat(existing.getStatus()).isEqualTo(TicketStatus.COMPLETED);
             assertThat(existing.getCompletedAt()).isEqualTo(completion);
+            assertThat(existing.getUser()).isEqualTo(ticketOwner);
 
             ArgumentCaptor<Ticket> newTicketCaptor = ArgumentCaptor.forClass(Ticket.class);
             verify(ticketLogManager, times(1))
@@ -311,8 +312,88 @@ class TicketServiceTest {
             assertThat(proposed.getSolution()).isEqualTo("Fix applied");
             assertThat(proposed.getStatus()).isEqualTo(TicketStatus.COMPLETED);
             assertThat(proposed.getCompletedAt()).isEqualTo(completion);
+            assertThat(proposed.getUser()).isEqualTo(ticketOwner);
 
             verifyNoInteractions(userService);
+        }
+
+        @Test
+        @DisplayName("Should reassign the ticket user when userId is provided")
+        void shouldReassignUserWhenUserIdProvided() {
+            User ticketOwner = UserTestBuilder.aUser()
+                    .withPublicId(UUID.randomUUID())
+                    .withEmail("owner@worklog.test").build();
+            User newOwner = UserTestBuilder.aUser()
+                    .withPublicId(UUID.randomUUID())
+                    .withEmail("new-owner@worklog.test").build();
+            Ticket existing = TicketTestBuilder.aTicket()
+                    .withPublicId(ticket.getPublicId())
+                    .withClient(client).withSystem(system).withUser(ticketOwner)
+                    .build();
+            TicketUpdateRequest request = new TicketUpdateRequest(
+                    null, null, null, null, null, newOwner.getPublicId());
+
+            when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
+            when(userService.findActiveUser(newOwner.getPublicId())).thenReturn(newOwner);
+            when(ticketRepository.save(existing)).thenReturn(existing);
+            when(ticketMapper.toResponse(existing)).thenReturn(ticketResponse);
+
+            ticketService.updateTicket(existing.getPublicId(), request, user);
+
+            assertThat(existing.getUser()).isEqualTo(newOwner);
+
+            ArgumentCaptor<Ticket> newTicketCaptor = ArgumentCaptor.forClass(Ticket.class);
+            verify(ticketLogManager, times(1))
+                    .generateLogs(org.mockito.ArgumentMatchers.eq(existing),
+                            newTicketCaptor.capture(),
+                            org.mockito.ArgumentMatchers.eq(user));
+            assertThat(newTicketCaptor.getValue().getUser()).isEqualTo(newOwner);
+            verify(userService, times(1)).findActiveUser(newOwner.getPublicId());
+        }
+
+        @Test
+        @DisplayName("Should keep the current user when userId is null and skip the user lookup")
+        void shouldKeepUserWhenUserIdIsNull() {
+            User ticketOwner = UserTestBuilder.aUser()
+                    .withPublicId(UUID.randomUUID())
+                    .withEmail("owner@worklog.test").build();
+            Ticket existing = TicketTestBuilder.aTicket()
+                    .withPublicId(ticket.getPublicId())
+                    .withClient(client).withSystem(system).withUser(ticketOwner)
+                    .build();
+            TicketUpdateRequest request = new TicketUpdateRequest(
+                    "New title", null, null, null, null, null);
+
+            when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
+            when(ticketRepository.save(existing)).thenReturn(existing);
+            when(ticketMapper.toResponse(existing)).thenReturn(ticketResponse);
+
+            ticketService.updateTicket(existing.getPublicId(), request, user);
+
+            assertThat(existing.getUser()).isEqualTo(ticketOwner);
+            verifyNoInteractions(userService);
+        }
+
+        @Test
+        @DisplayName("Should propagate BusinessException when the reassigned user is inactive")
+        void shouldPropagateWhenReassignedUserInactive() {
+            UUID newOwnerId = UUID.randomUUID();
+            Ticket existing = TicketTestBuilder.aTicket()
+                    .withPublicId(ticket.getPublicId())
+                    .withClient(client).withSystem(system).withUser(user)
+                    .build();
+            TicketUpdateRequest request = new TicketUpdateRequest(
+                    null, null, null, null, null, newOwnerId);
+
+            when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
+            when(userService.findActiveUser(newOwnerId))
+                    .thenThrow(new BusinessException("User is not active"));
+
+            assertThrows(BusinessException.class,
+                    () -> ticketService.updateTicket(existing.getPublicId(), request, user));
+
+            verify(ticketRepository, never()).save(any());
+            verifyNoInteractions(ticketLogManager);
         }
     }
 

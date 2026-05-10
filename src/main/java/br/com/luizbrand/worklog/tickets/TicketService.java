@@ -110,19 +110,23 @@ public class TicketService {
         Ticket existingTicket = ticketRepository.findByPublicId(ticketPublicId)
                 .orElseThrow(() -> new TicketNotFoundException("Ticket not found with publicId: " + ticketPublicId));
 
-        Ticket newTicket = prepareNewTicket(existingTicket, ticketRequest);
+        User reassignedUser = ticketRequest.userId() != null
+                ? userService.findActiveUser(ticketRequest.userId())
+                : null;
+
+        Ticket newTicket = prepareNewTicket(existingTicket, ticketRequest, reassignedUser);
 
         //Chamar o log manager para registrar os logs
         ticketLogManager.generateLogs(existingTicket, newTicket, currentUser);
         //Atualiza o ticket realmente
-        updateTicketEntity(existingTicket, ticketRequest);
+        updateTicketEntity(existingTicket, ticketRequest, reassignedUser);
 
         Ticket savedTicket = ticketRepository.save(existingTicket);
 
         return ticketMapper.toResponse(savedTicket);
     }
 
-    private Ticket prepareNewTicket(Ticket existingTicket, TicketUpdateRequest ticketRequest) {
+    private Ticket prepareNewTicket(Ticket existingTicket, TicketUpdateRequest ticketRequest, User reassignedUser) {
         return Ticket.builder()
                 .title(ticketRequest.title() != null ? ticketRequest.title() : existingTicket.getTitle())
                 .description(ticketRequest.description() != null ? ticketRequest.description() : existingTicket.getDescription())
@@ -131,16 +135,18 @@ public class TicketService {
                 .completedAt(ticketRequest.completedAt() != null ? ticketRequest.completedAt() : existingTicket.getCompletedAt())
                 .client(existingTicket.getClient())
                 .system(existingTicket.getSystem())
+                .user(reassignedUser != null ? reassignedUser : existingTicket.getUser())
                 .build();
 
     }
 
-    private void  updateTicketEntity(Ticket ticket, TicketUpdateRequest request) {
+    private void  updateTicketEntity(Ticket ticket, TicketUpdateRequest request, User reassignedUser) {
         if (request.title() != null) ticket.setTitle(request.title());
         if (request.description() != null) ticket.setDescription(request.description());
         if (request.solution() != null) ticket.setSolution(request.solution());
         if (request.status() != null) ticket.setStatus(request.status());
         if (request.completedAt() != null) ticket.setCompletedAt(request.completedAt());
+        if (reassignedUser != null) ticket.setUser(reassignedUser);
     }
 
 }

@@ -181,6 +181,27 @@ class TicketLogManagerTest {
         }
 
         @Test
+        @DisplayName("Should log a STRING entry with the user's email when the ticket is reassigned")
+        void shouldLogUserReassignment() {
+            User newOwner = UserTestBuilder.aUser()
+                    .withPublicId(UUID.randomUUID())
+                    .withEmail("new-owner@worklog.test").build();
+            Ticket oldTicket = baseTicket();
+            Ticket newTicket = baseTicket();
+            newTicket.setUser(newOwner);
+
+            ticketLogManager.generateLogs(oldTicket, newTicket, currentUser);
+
+            List<TicketLog> logs = capturedLogs();
+            assertThat(logs).hasSize(1);
+            TicketLog log = logs.get(0);
+            assertThat(log.getFieldChanged()).isEqualTo("user");
+            assertThat(log.getFieldType()).isEqualTo(FieldType.STRING);
+            assertThat(log.getOldValue()).isEqualTo(currentUser.getEmail());
+            assertThat(log.getNewValue()).isEqualTo("new-owner@worklog.test");
+        }
+
+        @Test
         @DisplayName("Should log a DATETIME entry with label 'Conclusion Date' when completedAt changes")
         void shouldLogCompletedAtChange() {
             LocalDateTime completion = LocalDateTime.of(2026, 4, 21, 12, 0);
