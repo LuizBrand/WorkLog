@@ -12,14 +12,17 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-    private static final String SECURITY_SCHEME_NAME = "bearerAuth";
+    private static final String SECURITY_SCHEME_NAME = "cookieAuth";
+    private static final String ACCESS_COOKIE_NAME = "worklog_access";
 
     @Bean
     public OpenAPI openAPI() {
         return new OpenAPI()
                 .info(new Info()
                         .title("WorkLog API")
-                        .description("API para gerenciamento de tickets e interações de suporte ao cliente")
+                        .description("API para gerenciamento de tickets e interações de suporte ao cliente. "
+                                + "Autenticação via cookie HttpOnly `" + ACCESS_COOKIE_NAME + "` emitido pelo endpoint "
+                                + "`POST /worklog/auth/login` (o browser anexa o cookie automaticamente em chamadas subsequentes).")
                         .version("v1.0.0")
                         .contact(new Contact()
                                 .name("Luiz Brand")))
@@ -27,10 +30,10 @@ public class OpenApiConfig {
                 .components(new Components()
                         .addSecuritySchemes(SECURITY_SCHEME_NAME,
                                 new SecurityScheme()
-                                        .name(SECURITY_SCHEME_NAME)
-                                        .type(SecurityScheme.Type.HTTP)
-                                        .scheme("bearer")
-                                        .bearerFormat("JWT")));
+                                        .name(ACCESS_COOKIE_NAME)
+                                        .type(SecurityScheme.Type.APIKEY)
+                                        .in(SecurityScheme.In.COOKIE)
+                                        .description("JWT access token emitido como cookie HttpOnly após login.")));
     }
 
 }
