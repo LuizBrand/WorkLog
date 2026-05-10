@@ -6,9 +6,15 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- **Backend gaps plan complete.** All 7 phases shipped: 1 (`840813a`), 2 (`34b49f9`), 3 (`98431e5`), 4 (`be1b843`), 5 (`8e1d98e`), 6 (`6baa088`), 7a (`94c744c`), 7b (`598e346`), 7c (`44cbb34`). `backend-gaps.md` is fully cleared. **Frontend coordination required:** drop `localStorage` token persistence (`src/state/auth.ts`), drop the `Authorization: Bearer` Axios interceptor (`src/lib/api.ts`), add `withCredentials: true` on Axios calls. Awaiting user direction on next initiative.
+- **Backend gaps plan complete.** All 7 phases shipped (commits `840813a` → `44cbb34`). `backend-gaps.md` is fully cleared.
+- **Post-audit hardening:**
+  - Fix A — OpenAPI cookie scheme: shipped as `4269a3c`.
+  - Fix B — CSRF protection (defense in depth over SameSite=Strict): **plan documented** at `.claude/csrf-protection-plan.md`. Not yet implemented; trigger after the frontend finishes its Phase-7 migration.
+- **Frontend coordination required (Phase 7 prerequisite for Fix B):** drop `localStorage` token persistence (`src/state/auth.ts`), drop the `Authorization: Bearer` Axios interceptor (`src/lib/api.ts`), add `withCredentials: true` on Axios calls.
 
 ## Session log
+- [x] 2026-05-10 — Fix A (post-Phase-7 audit): switched `OpenApiConfig` from the now-bogus Bearer JWT security scheme to an API-key cookie scheme (`type: APIKEY`, `in: COOKIE`, name: `worklog_access`). Swagger UI's "Authorize" button no longer prompts for a Bearer token. New `OpenApiConfigTest` (3 cases: cookie scheme, global requirement references the cookie scheme, legacy bearer scheme is absent). Watched red on the cookie test (current config had Bearer JWT), then green after the swap. Suite: 237/237 (234 → 237, +3). Also wrote `.claude/csrf-protection-plan.md` for Fix B (CSRF tokens via `CookieCsrfTokenRepository.withHttpOnlyFalse()`, coordinated with frontend Axios `xsrfCookieName`/`xsrfHeaderName` defaults). Shipped as `4269a3c` `docs(openapi): describe auth as HttpOnly cookie scheme`.
+
 - [x] 2026-05-10 — Backend gaps Phase 7c (CORS for credentialed cookies + cookie yaml config) implemented TDD; shipped as `44cbb34`.
   - `CorsConfig`: `setAllowCredentials(true)`; dropped `Authorization` from `setAllowedHeaders` (auth is now cookie-based, header isn't carried). Remaining allowed headers: `Content-Type`, `Accept`.
   - Tests first: flipped `CorsConfigTest.shouldNotAllowCredentials` → `shouldAllowCredentials`; rewrote `shouldAllowAuthHeaders` → `shouldAllowContentTypeAndAcceptHeaders` asserting `Authorization` is NOT in the allowed list. Initial run red as expected, then green after the CorsConfig change.
