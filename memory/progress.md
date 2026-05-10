@@ -6,9 +6,13 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phase 1 shipped at `840813a`. Phases 2–7 still queued (CANCELLED status, priority field, system enabled, client enabled in PATCH, client soft-delete, HttpOnly cookies).
+- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phases 1 (shipped `840813a`) and 2 (shipped `34b49f9`) done. Phases 3–7 still queued (priority field, system enabled, client enabled in PATCH, client soft-delete, HttpOnly cookies).
 
 ## Session log
+- [x] 2026-05-10 — Backend gaps Phase 2 (`TicketStatus.CANCELLED`) implemented TDD. Tests first: `TicketLogManagerTest.shouldLogStatusTransitionToCancelled`, `TicketServiceTest.shouldPersistCancelledStatusOnCreate`, `TicketServiceTest.shouldPersistCancelledStatusOnUpdate`, `TicketControllerTest.shouldAcceptCancelledStatusOnCreate`, `TicketControllerTest.shouldAcceptCancelledStatusOnUpdate`. Compile failed for the right reason (missing enum constant), then implementation appended `CANCELLED` to `TicketStatus`. No migration: `tickets.status` is `VARCHAR(50) NOT NULL` (V1) and Hibernate persists the enum name as-is. `backend-gaps.md` Gap 2 removed in the same slice.
+  - Suite: 210/210 green (205 → 210, +5).
+  - Shipped as `34b49f9` `feat(tickets): support CANCELLED status`.
+
 - [x] 2026-05-10 — Backend gaps Phase 1 (`userId` reassignment in `TicketUpdateRequest`) implemented TDD. Tests first: 3 new `TicketServiceTest$UpdateTicketTests` cases (reassign / keep when null / propagate `BusinessException` when reassigned user inactive), 1 new `TicketLogManagerTest` case (logs `"user"` STRING field as old-email → new-email), 1 new `TicketControllerTest$UpdateTicket` case (forwards `userId` payload to service). Also fixed 4 compile-broken `TicketUpdateRequest` constructor calls (record now 6 args after `userId` was added) in `TicketServiceTest` and `TicketControllerTest`. Watched red on the four behavioral tests, then implemented.
   - `TicketUpdateRequest` adds `UUID userId`.
   - `TicketService.updateTicket` resolves the reassigned user **once** via `userService.findActiveUser(...)` before logging/saving; passes the resolved `User` (or `null`) to `prepareNewTicket` and `updateTicketEntity` to avoid double DB lookups. `BusinessException` from inactive reassignment propagates before `ticketLogManager.generateLogs` and `ticketRepository.save` (verified by tests).
