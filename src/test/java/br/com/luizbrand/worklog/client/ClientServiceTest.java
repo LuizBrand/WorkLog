@@ -101,7 +101,7 @@ class ClientServiceTest {
         @Test
         @DisplayName("Should create and return ClientResponse when name is unique")
         void shouldCreateClientWhenNameIsUnique() {
-            ClientRequest request = new ClientRequest("Test Client", Collections.emptyList());
+            ClientRequest request = new ClientRequest("Test Client", Collections.emptyList(), null);
             
             when(clientRepository.findByName(request.name())).thenReturn(Optional.empty());
             when(clientMapper.toClient(any(ClientRequest.class), anyList())).thenReturn(client);
@@ -117,7 +117,7 @@ class ClientServiceTest {
         @Test
         @DisplayName("Should throw ClientAlreadyExistsException when name already exists")
         void shouldThrowExceptionWhenNameExists() {
-            ClientRequest request = new ClientRequest("Test Client", Collections.emptyList());
+            ClientRequest request = new ClientRequest("Test Client", Collections.emptyList(), null);
             when(clientRepository.findByName(request.name())).thenReturn(Optional.of(client));
 
             assertThrows(ClientAlreadyExistsException.class, () -> clientService.createClient(request));
@@ -132,7 +132,7 @@ class ClientServiceTest {
         @Test
         @DisplayName("Should update and return ClientResponse when client exists")
         void shouldUpdateClientWhenExists() {
-            ClientRequest request = new ClientRequest("Updated Name", Collections.emptyList());
+            ClientRequest request = new ClientRequest("Updated Name", Collections.emptyList(), null);
             
             when(clientRepository.findByPublicId(publicId)).thenReturn(Optional.of(client));
             when(clientRepository.save(client)).thenReturn(client);
@@ -148,10 +148,24 @@ class ClientServiceTest {
         @Test
         @DisplayName("Should throw ClientNotFoundException when updating non-existent client")
         void shouldThrowExceptionWhenUpdatingNonExistentClient() {
-            ClientRequest request = new ClientRequest("Updated Name", Collections.emptyList());
+            ClientRequest request = new ClientRequest("Updated Name", Collections.emptyList(), null);
             when(clientRepository.findByPublicId(publicId)).thenReturn(Optional.empty());
 
             assertThrows(ClientNotFoundException.class, () -> clientService.updateClient(publicId, request));
+        }
+
+        @Test
+        @DisplayName("Should forward enabled=false in the request to the mapper")
+        void shouldForwardEnabledFalseToMapper() {
+            ClientRequest request = new ClientRequest("Updated Name", Collections.emptyList(), false);
+
+            when(clientRepository.findByPublicId(publicId)).thenReturn(Optional.of(client));
+            when(clientRepository.save(client)).thenReturn(client);
+            when(clientMapper.toClientResponse(client)).thenReturn(clientResponse);
+
+            clientService.updateClient(publicId, request);
+
+            verify(clientMapper).updateClient(eq(request), anyList(), eq(client));
         }
     }
 
@@ -200,7 +214,7 @@ class ClientServiceTest {
         @DisplayName("Should resolve associated systems when systemsPublicIds is provided")
         void shouldResolveSystemsWhenPublicIdsProvided() {
             UUID systemId = UUID.randomUUID();
-            ClientRequest request = new ClientRequest("New Client", List.of(systemId));
+            ClientRequest request = new ClientRequest("New Client", List.of(systemId), null);
             Systems system = new Systems();
             system.setPublicId(systemId);
             List<Systems> associated = List.of(system);
@@ -222,7 +236,7 @@ class ClientServiceTest {
         @Test
         @DisplayName("Should not call SystemService when systemsPublicIds is null")
         void shouldNotResolveSystemsWhenPublicIdsNull() {
-            ClientRequest request = new ClientRequest("New Client", null);
+            ClientRequest request = new ClientRequest("New Client", null, null);
 
             when(clientRepository.findByName(request.name())).thenReturn(Optional.empty());
             when(clientMapper.toClient(eq(request), anyList())).thenReturn(client);
@@ -271,9 +285,8 @@ class ClientServiceTest {
         }
     }
 
-    @ActiveProfiles("test")
-    @ExtendWith(MockitoExtension.class)
-    static
+    @Nested
+    @DisplayName("ClientMapper")
     class ClientMapperTest {
 
         private final ClientMapper clientMapper = Mappers.getMapper(ClientMapper.class);
@@ -293,7 +306,7 @@ class ClientServiceTest {
             @DisplayName("Should map ClientRequest and Systems to Client correctly")
             void shouldMapToClient() {
                 UUID systemId = UUID.randomUUID();
-                ClientRequest request = new ClientRequest("New Client", List.of(systemId));
+                ClientRequest request = new ClientRequest("New Client", List.of(systemId), null);
                 Systems system = new Systems();
                 system.setPublicId(systemId);
                 system.setName("System 1");
@@ -362,7 +375,7 @@ class ClientServiceTest {
             @DisplayName("Should update Client with values from ClientRequest")
             void shouldUpdateClient() {
                 UUID systemId = UUID.randomUUID();
-                ClientRequest request = new ClientRequest("Updated Name", List.of(systemId));
+                ClientRequest request = new ClientRequest("Updated Name", List.of(systemId), null);
                 Systems system = new Systems();
                 system.setPublicId(systemId);
                 system.setName("System Updated");
@@ -381,16 +394,46 @@ class ClientServiceTest {
             @Test
             @DisplayName("Should not update fields if source is null")
             void shouldNotUpdateClientWithNulls() {
-                ClientRequest request = new ClientRequest(null, null);
+                ClientRequest request = new ClientRequest(null, null, null);
                 Client client = new Client();
                 client.setName("Old Name");
                 List<Systems> oldSystems = Collections.emptyList();
                 client.setSystems(oldSystems);
+                client.setIsEnabled(true);
 
                 clientMapper.updateClient(request, null, client);
 
                 assertEquals("Old Name", client.getName());
                 assertEquals(oldSystems, client.getSystems());
+                assertTrue(client.getIsEnabled());
+            }
+
+            @Test
+            @DisplayName("Should flip isEnabled to false when request.enabled is false")
+            void shouldFlipIsEnabledWhenEnabledFalse() {
+                ClientRequest request = new ClientRequest("Same Name", List.of(), false);
+                Client client = new Client();
+                client.setName("Same Name");
+                client.setIsEnabled(true);
+                client.setSystems(new ArrayList<>());
+
+                clientMapper.updateClient(request, List.of(), client);
+
+                assertFalse(client.getIsEnabled());
+            }
+
+            @Test
+            @DisplayName("Should re-enable isEnabled when request.enabled is true")
+            void shouldEnableIsEnabledWhenEnabledTrue() {
+                ClientRequest request = new ClientRequest("Same Name", List.of(), true);
+                Client client = new Client();
+                client.setName("Same Name");
+                client.setIsEnabled(false);
+                client.setSystems(new ArrayList<>());
+
+                clientMapper.updateClient(request, List.of(), client);
+
+                assertTrue(client.getIsEnabled());
             }
         }
     }

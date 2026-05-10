@@ -10,5 +10,6 @@ public record ClientRequest(
         @NotBlank(message = "O nome é obrigatório")
         String name,
         @NotEmpty(message = "A lista de sistemas não pode estar vazia")
-        List<UUID> systemsPublicIds) {
+        List<UUID> systemsPublicIds,
+        Boolean enabled) {
 }

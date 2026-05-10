@@ -11,15 +11,6 @@ Atualizar conforme novos gaps forem identificados durante o desenvolvimento.
 
 ## Clientes
 
-### 5. `ClientRequest` não expõe campo `enabled` (sem endpoint de desativar/reativar)
-
-**Onde falta:** `PATCH /clients/{publicId}` — `ClientRequest`
-**O que falta:** campo `enabled` para desativar ou reativar um cliente via update
-**Impacto:** não há como alterar o status ATIVO/INATIVO de um cliente pela UI; botão "Desativar" omitido do painel de detalhe
-**Frontend:** `ClientStatusBadge` exibe o status atual mas sem ação associada
-
----
-
 ### 6. Sem endpoint `DELETE /clients/{publicId}`
 
 **Onde falta:** `clientes.ts` — nenhuma operação DELETE gerada pelo Orval

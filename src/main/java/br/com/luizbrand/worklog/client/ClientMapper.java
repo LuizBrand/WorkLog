@@ -30,6 +30,7 @@ public abstract class ClientMapper {
     public abstract ClientSummary toSummary(Client client);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(source = "clientRequest.enabled", target = "isEnabled")
     public abstract void updateClient(ClientRequest clientRequest, List<Systems> systems, @MappingTarget Client client);
 
     protected OffsetDateTime fromLocalDateTimeToOffsetDateTime(LocalDateTime localDateTime) {

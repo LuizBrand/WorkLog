@@ -128,7 +128,7 @@ class ClientControllerTest {
         @DisplayName("Should return 200 OK and an updated client")
         void shouldReturnAnUpdatedClientWhenClientExists() throws Exception {
 
-            ClientRequest clientRequest = new ClientRequest("Updated Client Name", List.of(publicId));
+            ClientRequest clientRequest = new ClientRequest("Updated Client Name", List.of(publicId), null);
             ClientResponse clientUpdated = new ClientResponse(
                     clientResponse.publicId(),
                     clientRequest.name(),
@@ -154,7 +154,7 @@ class ClientControllerTest {
         @Test
         @DisplayName("Should return 404 Not Found when updating a non-existent client")
         void shouldReturn404WhenUpdatingMissingClient() throws Exception {
-            ClientRequest clientRequest = new ClientRequest("Updated Client Name", List.of(publicId));
+            ClientRequest clientRequest = new ClientRequest("Updated Client Name", List.of(publicId), null);
             when(clientService.updateClient(nonExistenId, clientRequest))
                     .thenThrow(new ClientNotFoundException(notFoundExpectedMessage));
 
@@ -163,6 +163,28 @@ class ClientControllerTest {
                             .content(objectMapper.writeValueAsString(clientRequest)))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.message").value(notFoundExpectedMessage));
+        }
+
+        @Test
+        @DisplayName("Should return 200 OK with enabled=false when PATCH carries enabled=false")
+        void shouldReturnDisabledWhenPatchSetsEnabledFalse() throws Exception {
+            UUID systemId = clientResponse.systems().get(0).publicId();
+            ClientRequest clientRequest = new ClientRequest("Client Name", List.of(systemId), false);
+            ClientResponse clientUpdated = new ClientResponse(
+                    clientResponse.publicId(),
+                    clientResponse.name(),
+                    false,
+                    clientResponse.createdAt(),
+                    clientResponse.systems()
+            );
+
+            when(clientService.updateClient(clientResponse.publicId(), clientRequest)).thenReturn(clientUpdated);
+
+            mockMvc.perform(patch("/clients/{publicId}", clientResponse.publicId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(clientRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.enabled").value(false));
         }
     }
 
@@ -196,7 +218,7 @@ class ClientControllerTest {
         @DisplayName("Should return 201 Created with the new client on a valid request")
         void shouldReturn201OnSuccess() throws Exception {
             UUID systemId = clientResponse.systems().get(0).publicId();
-            ClientRequest request = new ClientRequest("Client Name", List.of(systemId));
+            ClientRequest request = new ClientRequest("Client Name", List.of(systemId), null);
 
             when(clientService.createClient(any(ClientRequest.class))).thenReturn(clientResponse);
 
@@ -212,7 +234,7 @@ class ClientControllerTest {
         @DisplayName("Should return 409 Conflict when the name already exists")
         void shouldReturn409OnDuplicate() throws Exception {
             UUID systemId = clientResponse.systems().get(0).publicId();
-            ClientRequest request = new ClientRequest("Client Name", List.of(systemId));
+            ClientRequest request = new ClientRequest("Client Name", List.of(systemId), null);
             String message = "Client with name: Client Name already exists";
             when(clientService.createClient(any(ClientRequest.class)))
                     .thenThrow(new ClientAlreadyExistsException(message));
@@ -228,7 +250,7 @@ class ClientControllerTest {
         @DisplayName("Should return 400 Bad Request when the name is blank")
         void shouldReturn400OnBlankName() throws Exception {
             UUID systemId = clientResponse.systems().get(0).publicId();
-            ClientRequest invalid = new ClientRequest("", List.of(systemId));
+            ClientRequest invalid = new ClientRequest("", List.of(systemId), null);
 
             mockMvc.perform(post("/clients/")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -240,7 +262,7 @@ class ClientControllerTest {
         @Test
         @DisplayName("Should return 400 Bad Request when systemsPublicIds is empty")
         void shouldReturn400OnEmptySystems() throws Exception {
-            ClientRequest invalid = new ClientRequest("Client Name", List.of());
+            ClientRequest invalid = new ClientRequest("Client Name", List.of(), null);
 
             mockMvc.perform(post("/clients/")
                             .contentType(MediaType.APPLICATION_JSON)
