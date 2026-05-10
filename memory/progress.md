@@ -6,9 +6,21 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phases 1 (`840813a`), 2 (`34b49f9`), 3 (`98431e5`), 4 (`be1b843`), 5 (`8e1d98e`), 6 (`6baa088`) shipped. Phase 7 still queued (HttpOnly cookies, sub-divided into 7a/7b/7c).
+- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phases 1 (`840813a`), 2 (`34b49f9`), 3 (`98431e5`), 4 (`be1b843`), 5 (`8e1d98e`), 6 (`6baa088`), 7a (`94c744c`) shipped. Phase 7b (AuthFilter reads cookie) and 7c (CORS + yaml) still queued. **State warning:** until 7b ships, the API is end-to-end broken — login emits cookies but `AuthFilter` still reads the `Authorization` header which the new flow never populates.
 
 ## Session log
+- [x] 2026-05-10 — Backend gaps Phase 7a (emit auth tokens via HttpOnly cookies) implemented TDD; shipped as `94c744c`.
+  - New types: `auth/CookieProperties` (record, `@ConfigurationProperties("worklog.cookies")` with `@DefaultValue` for `secure=false`, `sameSite=Strict`, `accessName=worklog_access`, `refreshName=worklog_refresh`, `refreshPath=/worklog/auth`); `auth/AuthCookieService` (builds/clears access & refresh `ResponseCookie`s; access TTL from `TokenProperties.expiration`, refresh TTL from `TokenProperties.refreshToken.expiration`); `auth/AuthTokens` (internal record returned by `AuthService.login`/`refreshToken`).
+  - Wired `@EnableConfigurationProperties(CookieProperties.class)` on `SecurityConfig` (CorsProperties uses the same pattern via `CorsConfig`).
+  - `AuthController` rewritten: `login` returns 204 + `Set-Cookie: worklog_access` (path `/`) + `Set-Cookie: worklog_refresh` (path `/worklog/auth`); `refresh` reads `@CookieValue(name="worklog_refresh", required=false)` and throws `RefreshTokenException` when null → 401 via global handler; `logout` reads same cookie, calls service only if present (idempotent), always clears both cookies via `Set-Cookie: ... Max-Age=0`. `register` unchanged (still returns 201 + `RegisterResponse`).
+  - `AuthService.login` / `refreshToken` now return `AuthTokens` instead of the deleted `AuthenticationResponse`.
+  - `AuthControllerDocs` updated to advertise the cookie-based flow.
+  - **Deleted:** `auth/dto/AuthenticationResponse.java`, `auth/refreshtoken/RefreshTokenRequest.java`.
+  - Tests first: `AuthControllerTest` rewritten — `LoginEndpoint.shouldReturn204AndSetCookiesOnSuccess` asserts HttpOnly/path/value for both cookies + `SameSite=Strict` substring on the `Set-Cookie` header. `RefreshEndpoint` has 3 cases (success rotates both cookies, missing cookie → 401, invalid token → 401). `LogoutEndpoint` has 2 cases (with cookie: delegates + clears; without cookie: still clears + no service call). `AuthServiceTest` updated to expect `AuthTokens` return type with `accessToken()`/`refreshToken()` accessors. Watched test-compile fail (missing `AuthCookieService`, `AuthTokens`), then implemented.
+  - `application.yaml` / `application-dev.yaml` / `application-prod.yaml` **not** changed — yaml block (and `prod.secure=true` / `dev.secure=false`) is intentionally deferred to Phase 7c per the plan. App boots fine because `CookieProperties` uses `@DefaultValue` on every component.
+  - Suite: 233/233 green (231 → 233, +2 net = 1 new refresh missing-cookie test + 1 new logout-without-session test; existing login/refresh/logout tests rewritten for cookies, register tests untouched).
+  - Shipped as `94c744c` `feat(auth): emit tokens via HttpOnly cookies`.
+
 - [x] 2026-05-10 — Backend gaps Phase 6 (`DELETE /clients/{publicId}` admin soft-delete) implemented TDD. Mirrors `TicketController.deleteTicket` (`TicketController.java:40-45`) + `TicketService.softDeleteTicket` (`TicketService.java:93-99`). New `ClientService.softDeleteClient(UUID)` (`@Transactional`, finds by publicId or `ClientNotFoundException`, sets `isEnabled=false`, saves). New `ClientController.softDeleteClient` (`@DeleteMapping("/{publicId}")` + `@PreAuthorize("hasRole('ADMIN')")` returning 204). Added Swagger op in `ClientControllerDocs` documenting 204/401/403/404.
   - Tests first: `ClientServiceTest$SoftDeleteClient.shouldSoftDeleteWhenClientExists` + `shouldThrowWhenMissing`; `ClientControllerTest$DeleteClient.shouldReturn204OnSuccess` + `shouldReturn404WhenMissing`. Watched test-compile fail (missing `ClientService.softDeleteClient`), then implemented.
   - Suite: 231/231 green (227 → 231, +4 = 2 service + 2 controller).
