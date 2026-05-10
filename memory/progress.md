@@ -6,9 +6,15 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phases 1 (`840813a`), 2 (`34b49f9`), 3 (`98431e5`), 4 (`be1b843`), 5 (`8e1d98e`) shipped. Phases 6–7 still queued (client soft-delete, HttpOnly cookies).
+- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phases 1 (`840813a`), 2 (`34b49f9`), 3 (`98431e5`), 4 (`be1b843`), 5 (`8e1d98e`), 6 (`6baa088`) shipped. Phase 7 still queued (HttpOnly cookies, sub-divided into 7a/7b/7c).
 
 ## Session log
+- [x] 2026-05-10 — Backend gaps Phase 6 (`DELETE /clients/{publicId}` admin soft-delete) implemented TDD. Mirrors `TicketController.deleteTicket` (`TicketController.java:40-45`) + `TicketService.softDeleteTicket` (`TicketService.java:93-99`). New `ClientService.softDeleteClient(UUID)` (`@Transactional`, finds by publicId or `ClientNotFoundException`, sets `isEnabled=false`, saves). New `ClientController.softDeleteClient` (`@DeleteMapping("/{publicId}")` + `@PreAuthorize("hasRole('ADMIN')")` returning 204). Added Swagger op in `ClientControllerDocs` documenting 204/401/403/404.
+  - Tests first: `ClientServiceTest$SoftDeleteClient.shouldSoftDeleteWhenClientExists` + `shouldThrowWhenMissing`; `ClientControllerTest$DeleteClient.shouldReturn204OnSuccess` + `shouldReturn404WhenMissing`. Watched test-compile fail (missing `ClientService.softDeleteClient`), then implemented.
+  - Suite: 231/231 green (227 → 231, +4 = 2 service + 2 controller).
+  - `backend-gaps.md` Gap 6 removed in the same commit.
+  - Shipped as `6baa088` `feat(clients): add admin soft-delete endpoint`.
+
 - [x] 2026-05-10 — Backend gaps Phase 5 (`enabled` em `ClientRequest` PATCH) implemented TDD. Added `Boolean enabled` (3rd positional, nullable) to `ClientRequest` record. `ClientMapper.updateClient` now carries `@Mapping(source = "clientRequest.enabled", target = "isEnabled")` — `@BeanMapping(NullValuePropertyMappingStrategy.IGNORE)` keeps null PATCH bodies non-overwriting.
   - Tests first: `ClientControllerTest$updateClient.shouldReturnDisabledWhenPatchSetsEnabledFalse` (PATCH `enabled=false` → JSON `enabled=false`); `ClientServiceTest$UpdateClient.shouldForwardEnabledFalseToMapper` (request with `enabled=false` is forwarded to mapper); `ClientServiceTest$ClientMapperTest$UpdateClient.shouldFlipIsEnabledWhenEnabledFalse` + `shouldEnableIsEnabledWhenEnabledTrue` (mapper actually mutates `client.isEnabled`). Watched test-compile fail for the right reason (3-arg ctor missing), then implemented.
   - Adjusted 12 `new ClientRequest(...)` call sites across `ClientControllerTest` and `ClientServiceTest` to pass the 3rd `enabled` arg.
