@@ -5,6 +5,7 @@ import br.com.luizbrand.worklog.support.RoleTestBuilder;
 import br.com.luizbrand.worklog.support.UserTestBuilder;
 import br.com.luizbrand.worklog.user.User;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.AfterEach;
@@ -64,8 +65,8 @@ class AuthFilterTest {
     class DoFilterInternalTests {
 
         @Test
-        @DisplayName("Should pass through without authenticating when Authorization header is missing")
-        void shouldPassThroughWhenHeaderMissing() throws Exception {
+        @DisplayName("Should pass through without authenticating when no cookies are present")
+        void shouldPassThroughWhenNoCookies() throws Exception {
             HttpServletRequest request = new MockHttpServletRequest();
             HttpServletResponse response = new MockHttpServletResponse();
 
@@ -77,10 +78,10 @@ class AuthFilterTest {
         }
 
         @Test
-        @DisplayName("Should pass through without authenticating when header does not start with Bearer")
-        void shouldPassThroughWhenHeaderDoesNotStartWithBearer() throws Exception {
+        @DisplayName("Should pass through without authenticating when access cookie is missing among other cookies")
+        void shouldPassThroughWhenAccessCookieMissing() throws Exception {
             MockHttpServletRequest request = new MockHttpServletRequest();
-            request.addHeader("Authorization", "Basic dXNlcjpwYXNz");
+            request.setCookies(new Cookie("worklog_refresh", "some-refresh"));
             HttpServletResponse response = new MockHttpServletResponse();
 
             authFilter.doFilterInternal(request, response, filterChain);
@@ -91,11 +92,11 @@ class AuthFilterTest {
         }
 
         @Test
-        @DisplayName("Should populate the SecurityContext when Bearer token is valid")
-        void shouldAuthenticateWhenBearerTokenValid() throws Exception {
+        @DisplayName("Should populate the SecurityContext when access cookie holds a valid JWT")
+        void shouldAuthenticateWhenAccessCookieValid() throws Exception {
             String token = "valid-token";
             MockHttpServletRequest request = new MockHttpServletRequest();
-            request.addHeader("Authorization", "Bearer " + token);
+            request.setCookies(new Cookie("worklog_access", token));
             HttpServletResponse response = new MockHttpServletResponse();
 
             when(jwtService.extractUsername(token)).thenReturn(user.getEmail());
@@ -114,11 +115,11 @@ class AuthFilterTest {
         }
 
         @Test
-        @DisplayName("Should continue the chain without setting auth when token is invalid")
+        @DisplayName("Should continue the chain without setting auth when the cookie token cannot be parsed")
         void shouldNotAuthenticateWhenTokenInvalid() throws Exception {
             String token = JwtTestSupport.malformed();
             MockHttpServletRequest request = new MockHttpServletRequest();
-            request.addHeader("Authorization", "Bearer " + token);
+            request.setCookies(new Cookie("worklog_access", token));
             HttpServletResponse response = new MockHttpServletResponse();
 
             when(jwtService.extractUsername(token)).thenReturn(null);
@@ -135,7 +136,7 @@ class AuthFilterTest {
         void shouldNotAuthenticateWhenIsTokenValidFalse() throws Exception {
             String token = "tampered-token";
             MockHttpServletRequest request = new MockHttpServletRequest();
-            request.addHeader("Authorization", "Bearer " + token);
+            request.setCookies(new Cookie("worklog_access", token));
             HttpServletResponse response = new MockHttpServletResponse();
 
             when(jwtService.extractUsername(token)).thenReturn(user.getEmail());
@@ -146,6 +147,20 @@ class AuthFilterTest {
 
             assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
             verify(filterChain, times(1)).doFilter(request, response);
+        }
+
+        @Test
+        @DisplayName("Should ignore Authorization header even when present (header path removed)")
+        void shouldIgnoreAuthorizationHeader() throws Exception {
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.addHeader("Authorization", "Bearer some-valid-looking-jwt");
+            HttpServletResponse response = new MockHttpServletResponse();
+
+            authFilter.doFilterInternal(request, response, filterChain);
+
+            verify(filterChain, times(1)).doFilter(request, response);
+            verify(jwtService, never()).extractUsername(any());
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         }
     }
 }

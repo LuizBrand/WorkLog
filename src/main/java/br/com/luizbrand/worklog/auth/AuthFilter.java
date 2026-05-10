@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.auth;
 import br.com.luizbrand.worklog.user.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,6 +19,8 @@ import java.io.IOException;
 @Component
 public class AuthFilter extends OncePerRequestFilter {
 
+    private static final String ACCESS_COOKIE_NAME = "worklog_access";
+
     private final JwtService jwtService;
     private static final Logger logger = LoggerFactory.getLogger(AuthFilter.class);
 
@@ -31,17 +34,13 @@ public class AuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        final String jwt = readAccessCookie(request);
+        if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        jwt = authHeader.substring(7);
-        userEmail = jwtService.extractUsername(jwt);
+        final String userEmail = jwtService.extractUsername(jwt);
         if (userEmail == null) {
             logger.debug("JWT extraction failed or token is invalid/expired. Skipping authentication for this request.");
         }
@@ -61,5 +60,19 @@ public class AuthFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String readAccessCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if (ACCESS_COOKIE_NAME.equals(cookie.getName())) {
+                String value = cookie.getValue();
+                return (value == null || value.isBlank()) ? null : value;
+            }
+        }
+        return null;
     }
 }
