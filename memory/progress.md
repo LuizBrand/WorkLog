@@ -6,9 +6,17 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phases 1 (`840813a`), 2 (`34b49f9`), 3 (`98431e5`), 4 (`be1b843`), 5 (`8e1d98e`), 6 (`6baa088`), 7a (`94c744c`), 7b (`598e346`) shipped. Phase 7c (CORS for credentialed cookies + cookie yaml) still queued.
+- **Backend gaps plan complete.** All 7 phases shipped: 1 (`840813a`), 2 (`34b49f9`), 3 (`98431e5`), 4 (`be1b843`), 5 (`8e1d98e`), 6 (`6baa088`), 7a (`94c744c`), 7b (`598e346`), 7c (`44cbb34`). `backend-gaps.md` is fully cleared. **Frontend coordination required:** drop `localStorage` token persistence (`src/state/auth.ts`), drop the `Authorization: Bearer` Axios interceptor (`src/lib/api.ts`), add `withCredentials: true` on Axios calls. Awaiting user direction on next initiative.
 
 ## Session log
+- [x] 2026-05-10 — Backend gaps Phase 7c (CORS for credentialed cookies + cookie yaml config) implemented TDD; shipped as `44cbb34`.
+  - `CorsConfig`: `setAllowCredentials(true)`; dropped `Authorization` from `setAllowedHeaders` (auth is now cookie-based, header isn't carried). Remaining allowed headers: `Content-Type`, `Accept`.
+  - Tests first: flipped `CorsConfigTest.shouldNotAllowCredentials` → `shouldAllowCredentials`; rewrote `shouldAllowAuthHeaders` → `shouldAllowContentTypeAndAcceptHeaders` asserting `Authorization` is NOT in the allowed list. Initial run red as expected, then green after the CorsConfig change.
+  - YAML: `application.yaml` adds the `worklog.cookies` block (secure=false, same-site=Strict, access-name=worklog_access, refresh-name=worklog_refresh, refresh-path=/worklog/auth — mirrors `@DefaultValue`s in `CookieProperties`). `application-prod.yaml` adds `worklog.cookies.secure: true` to enforce Secure flag in prod. `application-dev.yaml` adds `worklog.cookies.secure: false` for explicitness (matches default).
+  - `backend-gaps.md` Gap 7 removed in the same commit. Backend-gaps document is now fully cleared.
+  - Suite: 234/234 green (no net delta — 2 tests rewritten, 0 added/removed).
+  - Shipped as `44cbb34` `feat(auth): align CORS for credentialed cookies`.
+
 - [x] 2026-05-10 — Backend gaps Phase 7b (AuthFilter reads JWT from `worklog_access` cookie) implemented TDD; shipped as `598e346`.
   - `AuthFilter.doFilterInternal` now reads `jwt` from `request.getCookies()`, scanning for the `worklog_access` cookie (hardcoded constant `ACCESS_COOKIE_NAME = "worklog_access"` per plan). Authorization header branch removed entirely. Helper `readAccessCookie(HttpServletRequest)` returns null when cookies are absent, the named cookie is missing, or the value is blank.
   - Tests first: `AuthFilterTest` rewritten — 6 tests under `doFilterInternal()`: no cookies, refresh-cookie-only (no access cookie), valid access cookie (auth populated), unparseable token, `isTokenValid=false`, **plus** new `shouldIgnoreAuthorizationHeader` that asserts a Bearer header alone (no cookies) does **not** authenticate (confirms header path is gone). Confirmed initial run red on the cookie-based tests (filter still hit header branch), then implementation flipped the suite green.
