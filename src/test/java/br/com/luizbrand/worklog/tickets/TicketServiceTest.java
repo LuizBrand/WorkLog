@@ -194,6 +194,35 @@ class TicketServiceTest {
         }
 
         @Test
+        @DisplayName("Should persist a ticket created with status CANCELLED")
+        void shouldPersistCancelledStatusOnCreate() {
+            TicketRequest request = new TicketRequest(
+                    "Title", "Description", null,
+                    TicketStatus.CANCELLED, null,
+                    client.getPublicId(), system.getPublicId(), user.getPublicId());
+
+            Ticket mapped = TicketTestBuilder.aTicket()
+                    .withTitle(request.title())
+                    .withDescription(request.description())
+                    .withStatus(request.status())
+                    .withClient(null).withSystem(null).withUser(null)
+                    .build();
+
+            when(ticketMapper.toEntity(request)).thenReturn(mapped);
+            when(clientService.findActiveClient(request.clientId())).thenReturn(client);
+            when(systemService.findActiveSystem(request.systemId())).thenReturn(system);
+            when(userService.findActiveUser(request.userId())).thenReturn(user);
+            when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(ticketMapper.toResponse(any(Ticket.class))).thenReturn(ticketResponse);
+
+            ticketService.createTicket(request);
+
+            ArgumentCaptor<Ticket> captor = ArgumentCaptor.forClass(Ticket.class);
+            verify(ticketRepository).save(captor.capture());
+            assertThat(captor.getValue().getStatus()).isEqualTo(TicketStatus.CANCELLED);
+        }
+
+        @Test
         @DisplayName("Should propagate BusinessException when the referenced user is inactive")
         void shouldPropagateWhenUserInactive() {
             TicketRequest request = new TicketRequest(
@@ -372,6 +401,26 @@ class TicketServiceTest {
 
             assertThat(existing.getUser()).isEqualTo(ticketOwner);
             verifyNoInteractions(userService);
+        }
+
+        @Test
+        @DisplayName("Should persist a CANCELLED status on update")
+        void shouldPersistCancelledStatusOnUpdate() {
+            Ticket existing = TicketTestBuilder.aTicket()
+                    .withPublicId(ticket.getPublicId())
+                    .withStatus(TicketStatus.PENDING)
+                    .withClient(client).withSystem(system).withUser(user)
+                    .build();
+            TicketUpdateRequest request = new TicketUpdateRequest(
+                    null, null, null, TicketStatus.CANCELLED, null, null);
+
+            when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
+            when(ticketRepository.save(existing)).thenReturn(existing);
+            when(ticketMapper.toResponse(existing)).thenReturn(ticketResponse);
+
+            ticketService.updateTicket(existing.getPublicId(), request, user);
+
+            assertThat(existing.getStatus()).isEqualTo(TicketStatus.CANCELLED);
         }
 
         @Test

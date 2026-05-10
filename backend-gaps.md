@@ -7,15 +7,6 @@ Atualizar conforme novos gaps forem identificados durante o desenvolvimento.
 
 ## Tickets
 
-### 2. Status `CANCELLED`
-
-**Onde falta:** `TicketRequest.status` / `TicketUpdateRequest.status` — enum não inclui `CANCELLED`  
-**O que falta:** suporte ao estado "Cancelado" no backend (hoje só existem `PENDING`, `AWAITING_CUSTOMER`, `AWAITING_DEVELOPMENT`, `COMPLETED`)  
-**Impacto:** botão "Cancelado" existe na UI mas está desabilitado; status é UI-only até o backend suportar  
-**Frontend:** `UI_STATUS_WRITABLE` já exclui `CANCELLED`; botão desabilitado com `cursor-not-allowed`
-
----
-
 ### 3. Campo `priority` ausente em `TicketSummary`
 
 **Onde falta:** `GET /tickets` — schema `TicketSummary`  

@@ -4,5 +4,6 @@ public enum TicketStatus {
     PENDING,
     AWAITING_CUSTOMER,
     AWAITING_DEVELOPMENT,
-    COMPLETED
+    COMPLETED,
+    CANCELLED
 }

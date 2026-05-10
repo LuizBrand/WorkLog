@@ -184,6 +184,32 @@ class TicketControllerTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON));
         }
+
+        @Test
+        @DisplayName("Should accept status=CANCELLED in the create payload")
+        void shouldAcceptCancelledStatusOnCreate() throws Exception {
+            TicketRequest request = new TicketRequest(
+                    "Ticket X", "Desc", null,
+                    TicketStatus.CANCELLED, null,
+                    clientPublicId, systemPublicId, userPublicId);
+            TicketResponse cancelledResponse = TicketResponse.builder()
+                    .publicId(ticketPublicId)
+                    .title("Ticket X")
+                    .description("Desc")
+                    .status(TicketStatus.CANCELLED)
+                    .build();
+            when(ticketService.createTicket(any(TicketRequest.class))).thenReturn(cancelledResponse);
+
+            mockMvc.perform(post("/tickets/create")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+            ArgumentCaptor<TicketRequest> captor = ArgumentCaptor.forClass(TicketRequest.class);
+            verify(ticketService, times(1)).createTicket(captor.capture());
+            assertThat(captor.getValue().status()).isEqualTo(TicketStatus.CANCELLED);
+        }
     }
 
     @Nested
@@ -264,6 +290,25 @@ class TicketControllerTest {
 
             verify(ticketService, times(1))
                     .updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser));
+        }
+
+        @Test
+        @DisplayName("Should accept status=CANCELLED in the update payload")
+        void shouldAcceptCancelledStatusOnUpdate() throws Exception {
+            TicketUpdateRequest request = new TicketUpdateRequest(
+                    null, null, null, TicketStatus.CANCELLED, null, null);
+            when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser)))
+                    .thenReturn(ticketResponse);
+
+            mockMvc.perform(put("/tickets/update/{ticketPublicId}", ticketPublicId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk());
+
+            ArgumentCaptor<TicketUpdateRequest> captor = ArgumentCaptor.forClass(TicketUpdateRequest.class);
+            verify(ticketService, times(1))
+                    .updateTicket(eq(ticketPublicId), captor.capture(), eq(authenticatedUser));
+            assertThat(captor.getValue().status()).isEqualTo(TicketStatus.CANCELLED);
         }
 
         @Test

@@ -181,6 +181,23 @@ class TicketLogManagerTest {
         }
 
         @Test
+        @DisplayName("Should log a STRING entry when the status transitions to CANCELLED")
+        void shouldLogStatusTransitionToCancelled() {
+            Ticket oldTicket = baseTicket();
+            Ticket newTicket = baseTicket();
+            newTicket.setStatus(TicketStatus.CANCELLED);
+
+            ticketLogManager.generateLogs(oldTicket, newTicket, currentUser);
+
+            List<TicketLog> logs = capturedLogs();
+            assertThat(logs).hasSize(1);
+            assertThat(logs.get(0).getFieldChanged()).isEqualTo("status");
+            assertThat(logs.get(0).getFieldType()).isEqualTo(FieldType.STRING);
+            assertThat(logs.get(0).getOldValue()).isEqualTo(TicketStatus.PENDING.name());
+            assertThat(logs.get(0).getNewValue()).isEqualTo("CANCELLED");
+        }
+
+        @Test
         @DisplayName("Should log a STRING entry with the user's email when the ticket is reassigned")
         void shouldLogUserReassignment() {
             User newOwner = UserTestBuilder.aUser()
