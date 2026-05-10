@@ -6,9 +6,15 @@ hook (configured via `.claude/`) blocks completion when source files
 changed without an update here.
 
 ## In Progress
-- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phases 1 (`840813a`), 2 (`34b49f9`), 3 (`98431e5`), 4 (`be1b843`), 5 (`8e1d98e`), 6 (`6baa088`), 7a (`94c744c`) shipped. Phase 7b (AuthFilter reads cookie) and 7c (CORS + yaml) still queued. **State warning:** until 7b ships, the API is end-to-end broken — login emits cookies but `AuthFilter` still reads the `Authorization` header which the new flow never populates.
+- Backend gaps plan at `.claude/backend-gaps-implementation-plan.md` — Phases 1 (`840813a`), 2 (`34b49f9`), 3 (`98431e5`), 4 (`be1b843`), 5 (`8e1d98e`), 6 (`6baa088`), 7a (`94c744c`), 7b (`598e346`) shipped. Phase 7c (CORS for credentialed cookies + cookie yaml) still queued.
 
 ## Session log
+- [x] 2026-05-10 — Backend gaps Phase 7b (AuthFilter reads JWT from `worklog_access` cookie) implemented TDD; shipped as `598e346`.
+  - `AuthFilter.doFilterInternal` now reads `jwt` from `request.getCookies()`, scanning for the `worklog_access` cookie (hardcoded constant `ACCESS_COOKIE_NAME = "worklog_access"` per plan). Authorization header branch removed entirely. Helper `readAccessCookie(HttpServletRequest)` returns null when cookies are absent, the named cookie is missing, or the value is blank.
+  - Tests first: `AuthFilterTest` rewritten — 6 tests under `doFilterInternal()`: no cookies, refresh-cookie-only (no access cookie), valid access cookie (auth populated), unparseable token, `isTokenValid=false`, **plus** new `shouldIgnoreAuthorizationHeader` that asserts a Bearer header alone (no cookies) does **not** authenticate (confirms header path is gone). Confirmed initial run red on the cookie-based tests (filter still hit header branch), then implementation flipped the suite green.
+  - Suite: 234/234 green (233 → 234, +1 net = the new `shouldIgnoreAuthorizationHeader` test).
+  - Shipped as `598e346` `feat(auth): authenticate from access cookie`.
+
 - [x] 2026-05-10 — Backend gaps Phase 7a (emit auth tokens via HttpOnly cookies) implemented TDD; shipped as `94c744c`.
   - New types: `auth/CookieProperties` (record, `@ConfigurationProperties("worklog.cookies")` with `@DefaultValue` for `secure=false`, `sameSite=Strict`, `accessName=worklog_access`, `refreshName=worklog_refresh`, `refreshPath=/worklog/auth`); `auth/AuthCookieService` (builds/clears access & refresh `ResponseCookie`s; access TTL from `TokenProperties.expiration`, refresh TTL from `TokenProperties.refreshToken.expiration`); `auth/AuthTokens` (internal record returned by `AuthService.login`/`refreshToken`).
   - Wired `@EnableConfigurationProperties(CookieProperties.class)` on `SecurityConfig` (CorsProperties uses the same pattern via `CorsConfig`).
