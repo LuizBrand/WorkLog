@@ -1,10 +1,8 @@
 package br.com.luizbrand.worklog.auth;
 
-import br.com.luizbrand.worklog.auth.dto.AuthenticationResponse;
 import br.com.luizbrand.worklog.auth.dto.LoginRequest;
 import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import br.com.luizbrand.worklog.auth.dto.RegisterResponse;
-import br.com.luizbrand.worklog.auth.refreshtoken.RefreshTokenRequest;
 import br.com.luizbrand.worklog.exceptionhandler.ApiExceptionResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,7 +13,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 
-@Tag(name = "Autenticação", description = "Endpoints de registro, login, refresh token e logout")
+@Tag(name = "Autenticação", description = "Endpoints de registro, login, refresh token e logout (tokens via cookies HttpOnly)")
 @SecurityRequirements
 public interface AuthControllerDocs {
 
@@ -32,29 +30,27 @@ public interface AuthControllerDocs {
     ResponseEntity<RegisterResponse> register(RegisterRequest request);
 
     @Operation(summary = "Realizar login",
-            description = "Autentica o usuário e retorna um access token JWT e um refresh token.")
+            description = "Autentica o usuário e emite os tokens via cookies `worklog_access` (path `/`) e `worklog_refresh` (path `/worklog/auth`). Ambos são HttpOnly e SameSite=Strict.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Login realizado com sucesso",
-                    content = @Content(schema = @Schema(implementation = AuthenticationResponse.class))),
+            @ApiResponse(responseCode = "204", description = "Login realizado com sucesso; cookies emitidos via Set-Cookie"),
             @ApiResponse(responseCode = "401", description = "Credenciais inválidas")
     })
-    ResponseEntity<AuthenticationResponse> login(LoginRequest login);
+    ResponseEntity<Void> login(LoginRequest login);
 
     @Operation(summary = "Renovar access token",
-            description = "Gera um novo access token e um novo refresh token a partir de um refresh token válido. O refresh token anterior é invalidado.")
+            description = "Gera um novo access token e um novo refresh token a partir do cookie `worklog_refresh`. O refresh token anterior é invalidado e os cookies são re-emitidos.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Token renovado com sucesso",
-                    content = @Content(schema = @Schema(implementation = AuthenticationResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Refresh token inválido ou expirado",
+            @ApiResponse(responseCode = "204", description = "Token renovado com sucesso; novos cookies emitidos"),
+            @ApiResponse(responseCode = "401", description = "Refresh token cookie ausente, inválido ou expirado",
                     content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class)))
     })
-    ResponseEntity<AuthenticationResponse> refreshToken(RefreshTokenRequest request);
+    ResponseEntity<Void> refreshToken(String refreshToken);
 
     @Operation(summary = "Realizar logout",
-            description = "Invalida o refresh token do usuário no Redis.")
+            description = "Invalida o refresh token (se presente) no Redis e expira os cookies de auth.")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Logout realizado com sucesso")
+            @ApiResponse(responseCode = "204", description = "Logout realizado com sucesso; cookies expirados via Set-Cookie")
     })
-    ResponseEntity<Void> logout(RefreshTokenRequest request);
+    ResponseEntity<Void> logout(String refreshToken);
 
 }

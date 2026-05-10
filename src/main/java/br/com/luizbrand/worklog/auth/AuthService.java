@@ -2,7 +2,6 @@ package br.com.luizbrand.worklog.auth;
 
 import br.com.luizbrand.worklog.auth.dto.RegisterResponse;
 import br.com.luizbrand.worklog.auth.dto.LoginRequest;
-import br.com.luizbrand.worklog.auth.dto.AuthenticationResponse;
 import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import br.com.luizbrand.worklog.auth.refreshtoken.RefreshToken;
 import br.com.luizbrand.worklog.auth.refreshtoken.RefreshTokenService;
@@ -70,7 +69,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthenticationResponse login(LoginRequest request) {
+    public AuthTokens login(LoginRequest request) {
         UsernamePasswordAuthenticationToken userAndPass =
                 new UsernamePasswordAuthenticationToken(request.email(), request.password());
 
@@ -79,10 +78,10 @@ public class AuthService {
         String acessToken = jwtService.generateAcessToken(user);
         RefreshToken refreshToken = refreshTokenService.generateRefreshToken(user.getEmail());
 
-        return new AuthenticationResponse(acessToken, refreshToken.getId());
+        return new AuthTokens(acessToken, refreshToken.getId());
     }
 
-    public AuthenticationResponse refreshToken(String requestRefreshToken) {
+    public AuthTokens refreshToken(String requestRefreshToken) {
         return refreshTokenService.findByToken(requestRefreshToken)
                 .map(refreshToken -> {
                     UserDetails user = userDetailsService.loadUserByUsername(refreshToken.getUserEmail());
@@ -91,7 +90,7 @@ public class AuthService {
                     refreshTokenService.deleteByToken(requestRefreshToken);
                     RefreshToken newRefreshToken = refreshTokenService.generateRefreshToken(user.getUsername());
 
-                    return new AuthenticationResponse(newAcessToken, newRefreshToken.getId());
+                    return new AuthTokens(newAcessToken, newRefreshToken.getId());
                 })
                 .orElseThrow(() -> new RefreshTokenException("Invalid or expired session. Please log in again."));
 

@@ -1,13 +1,13 @@
 package br.com.luizbrand.worklog.auth;
 
-import br.com.luizbrand.worklog.auth.dto.AuthenticationResponse;
 import br.com.luizbrand.worklog.auth.dto.LoginRequest;
 import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import br.com.luizbrand.worklog.auth.dto.RegisterResponse;
-import br.com.luizbrand.worklog.auth.refreshtoken.RefreshTokenRequest;
 import br.com.luizbrand.worklog.exception.Business.RefreshTokenException;
 import br.com.luizbrand.worklog.exception.Conflict.EmailAlreadyExistsException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Cookie;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -15,17 +15,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -44,10 +48,37 @@ class AuthControllerTest {
     private AuthService authService;
 
     @MockitoBean
+    private AuthCookieService authCookieService;
+
+    @MockitoBean
     private AuthFilter authFilter;
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
+
+    @BeforeEach
+    void setUpCookieBuilders() {
+        when(authCookieService.buildAccessCookie(any(String.class)))
+                .thenAnswer(inv -> org.springframework.http.ResponseCookie
+                        .from("worklog_access", inv.getArgument(0))
+                        .httpOnly(true).secure(false).sameSite("Strict")
+                        .path("/").maxAge(900).build());
+        when(authCookieService.buildRefreshCookie(any(String.class)))
+                .thenAnswer(inv -> org.springframework.http.ResponseCookie
+                        .from("worklog_refresh", inv.getArgument(0))
+                        .httpOnly(true).secure(false).sameSite("Strict")
+                        .path("/worklog/auth").maxAge(3600).build());
+        when(authCookieService.clearAccessCookie())
+                .thenReturn(org.springframework.http.ResponseCookie
+                        .from("worklog_access", "")
+                        .httpOnly(true).secure(false).sameSite("Strict")
+                        .path("/").maxAge(0).build());
+        when(authCookieService.clearRefreshCookie())
+                .thenReturn(org.springframework.http.ResponseCookie
+                        .from("worklog_refresh", "")
+                        .httpOnly(true).secure(false).sameSite("Strict")
+                        .path("/worklog/auth").maxAge(0).build());
+    }
 
     @Nested
     @DisplayName("Endpoint: POST /worklog/auth/register")
@@ -111,18 +142,26 @@ class AuthControllerTest {
     class LoginEndpoint {
 
         @Test
-        @DisplayName("Should return 200 OK with tokens on valid credentials")
-        void shouldReturn200OnSuccess() throws Exception {
+        @DisplayName("Should return 204 No Content with HttpOnly access + refresh cookies on valid credentials")
+        void shouldReturn204AndSetCookiesOnSuccess() throws Exception {
             LoginRequest request = new LoginRequest("user@worklog.test", "Password1");
-            AuthenticationResponse response = new AuthenticationResponse("access-token", "refresh-token-id");
-            when(authService.login(any(LoginRequest.class))).thenReturn(response);
+            AuthTokens tokens = new AuthTokens("access-token", "refresh-token-id");
+            when(authService.login(any(LoginRequest.class))).thenReturn(tokens);
 
             mockMvc.perform(post("/worklog/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.acessToken").value(response.acessToken()))
-                    .andExpect(jsonPath("$.refreshToken").value(response.refreshToken()));
+                    .andExpect(status().isNoContent())
+                    .andExpect(cookie().exists("worklog_access"))
+                    .andExpect(cookie().value("worklog_access", "access-token"))
+                    .andExpect(cookie().httpOnly("worklog_access", true))
+                    .andExpect(cookie().path("worklog_access", "/"))
+                    .andExpect(cookie().exists("worklog_refresh"))
+                    .andExpect(cookie().value("worklog_refresh", "refresh-token-id"))
+                    .andExpect(cookie().httpOnly("worklog_refresh", true))
+                    .andExpect(cookie().path("worklog_refresh", "/worklog/auth"))
+                    .andExpect(header().stringValues(HttpHeaders.SET_COOKIE,
+                            Matchers.hasItem(Matchers.containsString("SameSite=Strict"))));
         }
 
     }
@@ -132,30 +171,35 @@ class AuthControllerTest {
     class RefreshEndpoint {
 
         @Test
-        @DisplayName("Should return 200 OK with rotated tokens on valid refresh token")
-        void shouldReturn200OnSuccess() throws Exception {
-            RefreshTokenRequest request = new RefreshTokenRequest("old-refresh");
-            AuthenticationResponse response = new AuthenticationResponse("new-access", "new-refresh");
-            when(authService.refreshToken("old-refresh")).thenReturn(response);
+        @DisplayName("Should return 204 No Content with rotated cookies when refresh cookie is valid")
+        void shouldReturn204AndRotateCookiesOnSuccess() throws Exception {
+            AuthTokens tokens = new AuthTokens("new-access", "new-refresh");
+            when(authService.refreshToken("old-refresh")).thenReturn(tokens);
 
             mockMvc.perform(post("/worklog/auth/refresh")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.acessToken").value(response.acessToken()))
-                    .andExpect(jsonPath("$.refreshToken").value(response.refreshToken()));
+                            .cookie(new Cookie("worklog_refresh", "old-refresh")))
+                    .andExpect(status().isNoContent())
+                    .andExpect(cookie().value("worklog_access", "new-access"))
+                    .andExpect(cookie().value("worklog_refresh", "new-refresh"));
         }
 
         @Test
-        @DisplayName("Should return 401 Unauthorized when refresh token is invalid")
+        @DisplayName("Should return 401 Unauthorized when refresh cookie is missing")
+        void shouldReturn401WhenCookieMissing() throws Exception {
+            mockMvc.perform(post("/worklog/auth/refresh"))
+                    .andExpect(status().isUnauthorized());
+
+            verify(authService, never()).refreshToken(any());
+        }
+
+        @Test
+        @DisplayName("Should return 401 Unauthorized when refresh cookie value is invalid")
         void shouldReturn401OnInvalidToken() throws Exception {
-            RefreshTokenRequest request = new RefreshTokenRequest("bad");
             String message = "Invalid or expired session. Please log in again.";
             when(authService.refreshToken("bad")).thenThrow(new RefreshTokenException(message));
 
             mockMvc.perform(post("/worklog/auth/refresh")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                            .cookie(new Cookie("worklog_refresh", "bad")))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.message").value(message));
         }
@@ -166,16 +210,28 @@ class AuthControllerTest {
     class LogoutEndpoint {
 
         @Test
-        @DisplayName("Should return 204 No Content and delegate deletion to the service")
-        void shouldReturn204OnSuccess() throws Exception {
-            RefreshTokenRequest request = new RefreshTokenRequest("refresh-to-invalidate");
-
+        @DisplayName("Should return 204 No Content, clear cookies, and delegate deletion to the service")
+        void shouldClearCookiesAndDelegate() throws Exception {
             mockMvc.perform(post("/worklog/auth/logout")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isNoContent());
+                            .cookie(new Cookie("worklog_refresh", "refresh-to-invalidate")))
+                    .andExpect(status().isNoContent())
+                    .andExpect(cookie().exists("worklog_access"))
+                    .andExpect(cookie().maxAge("worklog_access", 0))
+                    .andExpect(cookie().exists("worklog_refresh"))
+                    .andExpect(cookie().maxAge("worklog_refresh", 0));
 
-            verify(authService, times(1)).logout(request.refreshToken());
+            verify(authService, times(1)).logout("refresh-to-invalidate");
+        }
+
+        @Test
+        @DisplayName("Should still clear cookies and return 204 when no refresh cookie is present")
+        void shouldClearCookiesEvenWithoutSession() throws Exception {
+            mockMvc.perform(post("/worklog/auth/logout"))
+                    .andExpect(status().isNoContent())
+                    .andExpect(cookie().maxAge("worklog_access", 0))
+                    .andExpect(cookie().maxAge("worklog_refresh", 0));
+
+            verify(authService, never()).logout(any());
         }
     }
 }

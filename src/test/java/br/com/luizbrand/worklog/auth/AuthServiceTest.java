@@ -1,6 +1,5 @@
 package br.com.luizbrand.worklog.auth;
 
-import br.com.luizbrand.worklog.auth.dto.AuthenticationResponse;
 import br.com.luizbrand.worklog.auth.dto.LoginRequest;
 import br.com.luizbrand.worklog.auth.dto.RegisterRequest;
 import br.com.luizbrand.worklog.auth.dto.RegisterResponse;
@@ -166,9 +165,9 @@ class AuthServiceTest {
             when(jwtService.generateAcessToken(user)).thenReturn("access-token");
             when(refreshTokenService.generateRefreshToken(user.getEmail())).thenReturn(refreshToken);
 
-            AuthenticationResponse response = authService.login(request);
+            AuthTokens response = authService.login(request);
 
-            assertThat(response.acessToken()).isEqualTo("access-token");
+            assertThat(response.accessToken()).isEqualTo("access-token");
             assertThat(response.refreshToken()).isEqualTo(refreshToken.getId());
         }
 
@@ -204,9 +203,9 @@ class AuthServiceTest {
             when(jwtService.generateAcessToken(user)).thenReturn("new-access-token");
             when(refreshTokenService.generateRefreshToken(user.getEmail())).thenReturn(rotated);
 
-            AuthenticationResponse response = authService.refreshToken(existing.getId());
+            AuthTokens response = authService.refreshToken(existing.getId());
 
-            assertThat(response.acessToken()).isEqualTo("new-access-token");
+            assertThat(response.accessToken()).isEqualTo("new-access-token");
             assertThat(response.refreshToken()).isEqualTo(rotated.getId());
             verify(refreshTokenService).deleteByToken(existing.getId());
         }

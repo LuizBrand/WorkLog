@@ -1,7 +1,9 @@
 package br.com.luizbrand.worklog.config;
 
 import br.com.luizbrand.worklog.auth.AuthFilter;
+import br.com.luizbrand.worklog.auth.CookieProperties;
 import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
@@ -24,6 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
+@EnableConfigurationProperties(CookieProperties.class)
 public class SecurityConfig {
 
     private final AuthFilter authFilter;
