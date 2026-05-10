@@ -7,15 +7,6 @@ Atualizar conforme novos gaps forem identificados durante o desenvolvimento.
 
 ## Tickets
 
-### 3. Campo `priority` ausente em `TicketSummary`
-
-**Onde falta:** `GET /tickets` — schema `TicketSummary`  
-**O que falta:** campo `priority` (CRITICAL / HIGH / MEDIUM / LOW) na listagem de tickets  
-**Impacto:** coluna PRIORIDADE na tabela sempre exibe "—"  
-**Frontend:** coluna existe na tabela, aguardando campo no response
-
----
-
 ## Sistemas
 
 ### 4. `SystemResponse` não expõe campo de status ativo/inativo

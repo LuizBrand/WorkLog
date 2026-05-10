@@ -37,6 +37,7 @@ public class TicketLogManager {
         checkChange(oldTicket, newTicket, oldTicket.getDescription(), newTicket.getDescription(), "description", FieldType.STRING, changeGroupId, currentUser, logs);
         checkChange(oldTicket, newTicket, oldTicket.getSolution(), newTicket.getSolution(), "solution", FieldType.STRING, changeGroupId, currentUser, logs);
         checkChange(oldTicket, newTicket, oldTicket.getStatus(), newTicket.getStatus(), "status", FieldType.STRING, changeGroupId, currentUser, logs);
+        checkChange(oldTicket, newTicket, oldTicket.getPriority(), newTicket.getPriority(), "priority", FieldType.STRING, changeGroupId, currentUser, logs);
         checkChange(oldTicket, newTicket, oldTicket.getCompletedAt(), newTicket.getCompletedAt(), "Conclusion Date", FieldType.DATETIME, changeGroupId, currentUser, logs);
         checkChange(oldTicket, newTicket,
                 oldTicket.getUser() != null ? oldTicket.getUser().getEmail() : null,

@@ -17,6 +17,7 @@ import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
+import br.com.luizbrand.worklog.tickets.enums.TicketPriority;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
 import br.com.luizbrand.worklog.user.UserService;
@@ -108,7 +109,8 @@ class TicketServiceTest {
             TicketRequest request = new TicketRequest(
                     "Title", "Description", null,
                     TicketStatus.PENDING, null,
-                    client.getPublicId(), system.getPublicId(), user.getPublicId());
+                    client.getPublicId(), system.getPublicId(), user.getPublicId(),
+                    TicketPriority.MEDIUM);
 
             Ticket mapped = TicketTestBuilder.aTicket()
                     .withTitle(request.title())
@@ -142,7 +144,8 @@ class TicketServiceTest {
             TicketRequest request = new TicketRequest(
                     "Title", "Description", null,
                     TicketStatus.PENDING, null,
-                    client.getPublicId(), system.getPublicId(), null);
+                    client.getPublicId(), system.getPublicId(), null,
+                    TicketPriority.MEDIUM);
 
             Ticket mapped = TicketTestBuilder.aTicket()
                     .withClient(null).withSystem(null).withUser(null).build();
@@ -164,7 +167,8 @@ class TicketServiceTest {
             TicketRequest request = new TicketRequest(
                     "Title", "Description", null,
                     TicketStatus.PENDING, null,
-                    client.getPublicId(), system.getPublicId(), null);
+                    client.getPublicId(), system.getPublicId(), null,
+                    TicketPriority.MEDIUM);
 
             when(ticketMapper.toEntity(request)).thenReturn(ticket);
             when(clientService.findActiveClient(request.clientId()))
@@ -181,7 +185,8 @@ class TicketServiceTest {
             TicketRequest request = new TicketRequest(
                     "Title", "Description", null,
                     TicketStatus.PENDING, null,
-                    client.getPublicId(), system.getPublicId(), null);
+                    client.getPublicId(), system.getPublicId(), null,
+                    TicketPriority.MEDIUM);
 
             when(ticketMapper.toEntity(request)).thenReturn(ticket);
             when(clientService.findActiveClient(request.clientId())).thenReturn(client);
@@ -199,7 +204,8 @@ class TicketServiceTest {
             TicketRequest request = new TicketRequest(
                     "Title", "Description", null,
                     TicketStatus.CANCELLED, null,
-                    client.getPublicId(), system.getPublicId(), user.getPublicId());
+                    client.getPublicId(), system.getPublicId(), user.getPublicId(),
+                    TicketPriority.MEDIUM);
 
             Ticket mapped = TicketTestBuilder.aTicket()
                     .withTitle(request.title())
@@ -223,12 +229,42 @@ class TicketServiceTest {
         }
 
         @Test
+        @DisplayName("Should persist the priority value provided on create")
+        void shouldPersistPriorityOnCreate() {
+            TicketRequest request = new TicketRequest(
+                    "Title", "Description", null,
+                    TicketStatus.PENDING, null,
+                    client.getPublicId(), system.getPublicId(), user.getPublicId(),
+                    TicketPriority.CRITICAL);
+
+            Ticket mapped = TicketTestBuilder.aTicket()
+                    .withTitle(request.title())
+                    .withPriority(TicketPriority.CRITICAL)
+                    .withClient(null).withSystem(null).withUser(null)
+                    .build();
+
+            when(ticketMapper.toEntity(request)).thenReturn(mapped);
+            when(clientService.findActiveClient(request.clientId())).thenReturn(client);
+            when(systemService.findActiveSystem(request.systemId())).thenReturn(system);
+            when(userService.findActiveUser(request.userId())).thenReturn(user);
+            when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(ticketMapper.toResponse(any(Ticket.class))).thenReturn(ticketResponse);
+
+            ticketService.createTicket(request);
+
+            ArgumentCaptor<Ticket> captor = ArgumentCaptor.forClass(Ticket.class);
+            verify(ticketRepository).save(captor.capture());
+            assertThat(captor.getValue().getPriority()).isEqualTo(TicketPriority.CRITICAL);
+        }
+
+        @Test
         @DisplayName("Should propagate BusinessException when the referenced user is inactive")
         void shouldPropagateWhenUserInactive() {
             TicketRequest request = new TicketRequest(
                     "Title", "Description", null,
                     TicketStatus.PENDING, null,
-                    client.getPublicId(), system.getPublicId(), user.getPublicId());
+                    client.getPublicId(), system.getPublicId(), user.getPublicId(),
+                    TicketPriority.MEDIUM);
 
             when(ticketMapper.toEntity(request)).thenReturn(ticket);
             when(clientService.findActiveClient(request.clientId())).thenReturn(client);
@@ -279,7 +315,7 @@ class TicketServiceTest {
         void shouldThrowWhenTicketMissing() {
             UUID missing = UUID.randomUUID();
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    "New title", null, null, null, null, null);
+                    "New title", null, null, null, null, null, null);
 
             when(ticketRepository.findByPublicId(missing)).thenReturn(Optional.empty());
 
@@ -313,7 +349,7 @@ class TicketServiceTest {
 
             TicketUpdateRequest request = new TicketUpdateRequest(
                     "New title", null, "Fix applied",
-                    TicketStatus.COMPLETED, completion, null);
+                    TicketStatus.COMPLETED, completion, null, null);
 
             when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
             when(ticketRepository.save(existing)).thenReturn(existing);
@@ -360,7 +396,7 @@ class TicketServiceTest {
                     .withClient(client).withSystem(system).withUser(ticketOwner)
                     .build();
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    null, null, null, null, null, newOwner.getPublicId());
+                    null, null, null, null, null, newOwner.getPublicId(), null);
 
             when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
             when(userService.findActiveUser(newOwner.getPublicId())).thenReturn(newOwner);
@@ -391,7 +427,7 @@ class TicketServiceTest {
                     .withClient(client).withSystem(system).withUser(ticketOwner)
                     .build();
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    "New title", null, null, null, null, null);
+                    "New title", null, null, null, null, null, null);
 
             when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
             when(ticketRepository.save(existing)).thenReturn(existing);
@@ -412,7 +448,7 @@ class TicketServiceTest {
                     .withClient(client).withSystem(system).withUser(user)
                     .build();
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    null, null, null, TicketStatus.CANCELLED, null, null);
+                    null, null, null, TicketStatus.CANCELLED, null, null, null);
 
             when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
             when(ticketRepository.save(existing)).thenReturn(existing);
@@ -424,6 +460,46 @@ class TicketServiceTest {
         }
 
         @Test
+        @DisplayName("Should update the priority when provided on update")
+        void shouldUpdatePriorityWhenProvided() {
+            Ticket existing = TicketTestBuilder.aTicket()
+                    .withPublicId(ticket.getPublicId())
+                    .withPriority(TicketPriority.LOW)
+                    .withClient(client).withSystem(system).withUser(user)
+                    .build();
+            TicketUpdateRequest request = new TicketUpdateRequest(
+                    null, null, null, null, null, null, TicketPriority.CRITICAL);
+
+            when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
+            when(ticketRepository.save(existing)).thenReturn(existing);
+            when(ticketMapper.toResponse(existing)).thenReturn(ticketResponse);
+
+            ticketService.updateTicket(existing.getPublicId(), request, user);
+
+            assertThat(existing.getPriority()).isEqualTo(TicketPriority.CRITICAL);
+        }
+
+        @Test
+        @DisplayName("Should preserve the current priority when the update payload omits it")
+        void shouldPreservePriorityWhenNullOnUpdate() {
+            Ticket existing = TicketTestBuilder.aTicket()
+                    .withPublicId(ticket.getPublicId())
+                    .withPriority(TicketPriority.HIGH)
+                    .withClient(client).withSystem(system).withUser(user)
+                    .build();
+            TicketUpdateRequest request = new TicketUpdateRequest(
+                    "New title", null, null, null, null, null, null);
+
+            when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
+            when(ticketRepository.save(existing)).thenReturn(existing);
+            when(ticketMapper.toResponse(existing)).thenReturn(ticketResponse);
+
+            ticketService.updateTicket(existing.getPublicId(), request, user);
+
+            assertThat(existing.getPriority()).isEqualTo(TicketPriority.HIGH);
+        }
+
+        @Test
         @DisplayName("Should propagate BusinessException when the reassigned user is inactive")
         void shouldPropagateWhenReassignedUserInactive() {
             UUID newOwnerId = UUID.randomUUID();
@@ -432,7 +508,7 @@ class TicketServiceTest {
                     .withClient(client).withSystem(system).withUser(user)
                     .build();
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    null, null, null, null, null, newOwnerId);
+                    null, null, null, null, null, newOwnerId, null);
 
             when(ticketRepository.findByPublicId(existing.getPublicId())).thenReturn(Optional.of(existing));
             when(userService.findActiveUser(newOwnerId))

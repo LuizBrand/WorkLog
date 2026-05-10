@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.tickets.dto;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
 import br.com.luizbrand.worklog.client.dto.ClientSummary;
 import br.com.luizbrand.worklog.system.dto.SystemResponse;
+import br.com.luizbrand.worklog.tickets.enums.TicketPriority;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.dto.UserSummary;
 import lombok.Builder;
@@ -17,6 +18,7 @@ public record TicketResponse(
         String description,
         String solution,
         TicketStatus status,
+        TicketPriority priority,
         LocalDateTime createdAt,
         LocalDateTime completedAt,
         LocalDateTime updatedAt,

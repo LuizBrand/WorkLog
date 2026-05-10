@@ -14,6 +14,7 @@ import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
 import br.com.luizbrand.worklog.tickets.dto.TicketUpdateRequest;
 import br.com.luizbrand.worklog.tickets.enums.FieldType;
+import br.com.luizbrand.worklog.tickets.enums.TicketPriority;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
 import br.com.luizbrand.worklog.user.dto.UserSummary;
@@ -106,6 +107,7 @@ class TicketControllerTest {
                 .description("Desc")
                 .solution(null)
                 .status(TicketStatus.PENDING)
+                .priority(TicketPriority.MEDIUM)
                 .createdAt(createdAt)
                 .updatedAt(createdAt)
                 .completedAt(null)
@@ -132,7 +134,8 @@ class TicketControllerTest {
                     .andExpect(jsonPath("$.status").value(TicketStatus.PENDING.name()))
                     .andExpect(jsonPath("$.client.publicId").value(clientPublicId.toString()))
                     .andExpect(jsonPath("$.system.publicId").value(systemPublicId.toString()))
-                    .andExpect(jsonPath("$.user.publicId").value(userPublicId.toString()));
+                    .andExpect(jsonPath("$.user.publicId").value(userPublicId.toString()))
+                    .andExpect(jsonPath("$.priority").value(TicketPriority.MEDIUM.name()));
         }
 
         @Test
@@ -158,7 +161,8 @@ class TicketControllerTest {
             TicketRequest request = new TicketRequest(
                     "Ticket X", "Desc", null,
                     TicketStatus.PENDING, null,
-                    clientPublicId, systemPublicId, userPublicId);
+                    clientPublicId, systemPublicId, userPublicId,
+                    TicketPriority.MEDIUM);
             when(ticketService.createTicket(any(TicketRequest.class))).thenReturn(ticketResponse);
 
             mockMvc.perform(post("/tickets/create")
@@ -176,7 +180,24 @@ class TicketControllerTest {
             TicketRequest invalid = new TicketRequest(
                     "", "", null,
                     null, null,
-                    null, null, null);
+                    null, null, null,
+                    null);
+
+            mockMvc.perform(post("/tickets/create")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalid)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
+
+        @Test
+        @DisplayName("Should return 400 Bad Request when priority is missing on create")
+        void shouldReturn400WhenPriorityMissingOnCreate() throws Exception {
+            TicketRequest invalid = new TicketRequest(
+                    "Ticket X", "Desc", null,
+                    TicketStatus.PENDING, null,
+                    clientPublicId, systemPublicId, userPublicId,
+                    null);
 
             mockMvc.perform(post("/tickets/create")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -191,7 +212,8 @@ class TicketControllerTest {
             TicketRequest request = new TicketRequest(
                     "Ticket X", "Desc", null,
                     TicketStatus.CANCELLED, null,
-                    clientPublicId, systemPublicId, userPublicId);
+                    clientPublicId, systemPublicId, userPublicId,
+                    TicketPriority.MEDIUM);
             TicketResponse cancelledResponse = TicketResponse.builder()
                     .publicId(ticketPublicId)
                     .title("Ticket X")
@@ -233,7 +255,7 @@ class TicketControllerTest {
         void shouldReturn200OnSuccess() throws Exception {
             TicketUpdateRequest request = new TicketUpdateRequest(
                     "Updated title", null, "Solved",
-                    TicketStatus.COMPLETED, LocalDateTime.of(2026, 4, 21, 12, 0), null);
+                    TicketStatus.COMPLETED, LocalDateTime.of(2026, 4, 21, 12, 0), null, null);
             TicketResponse updated = TicketResponse.builder()
                     .publicId(ticketPublicId)
                     .title("Updated title")
@@ -263,7 +285,7 @@ class TicketControllerTest {
         @DisplayName("Should return 404 Not Found when updating a non-existent ticket")
         void shouldReturn404WhenUpdatingMissingTicket() throws Exception {
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    "any", null, null, null, null, null);
+                    "any", null, null, null, null, null, null);
             String message = "Ticket not found with publicId: " + ticketPublicId;
             when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), any(User.class)))
                     .thenThrow(new TicketNotFoundException(message));
@@ -279,7 +301,7 @@ class TicketControllerTest {
         @DisplayName("Should pass the authenticated principal through to the service")
         void shouldPassAuthenticatedPrincipalThroughToService() throws Exception {
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    "Updated title", null, null, null, null, null);
+                    "Updated title", null, null, null, null, null, null);
             when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser)))
                     .thenReturn(ticketResponse);
 
@@ -296,7 +318,7 @@ class TicketControllerTest {
         @DisplayName("Should accept status=CANCELLED in the update payload")
         void shouldAcceptCancelledStatusOnUpdate() throws Exception {
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    null, null, null, TicketStatus.CANCELLED, null, null);
+                    null, null, null, TicketStatus.CANCELLED, null, null, null);
             when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser)))
                     .thenReturn(ticketResponse);
 
@@ -316,7 +338,7 @@ class TicketControllerTest {
         void shouldForwardUserIdInPayload() throws Exception {
             UUID newOwnerId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690daabcd");
             TicketUpdateRequest request = new TicketUpdateRequest(
-                    null, null, null, null, null, newOwnerId);
+                    null, null, null, null, null, newOwnerId, null);
             when(ticketService.updateTicket(eq(ticketPublicId), any(TicketUpdateRequest.class), eq(authenticatedUser)))
                     .thenReturn(ticketResponse);
 
@@ -356,6 +378,7 @@ class TicketControllerTest {
                     .title("Ticket X")
                     .description("Desc")
                     .status(TicketStatus.PENDING)
+                    .priority(TicketPriority.HIGH)
                     .createdAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                     .updatedAt(LocalDateTime.of(2026, 4, 21, 10, 0))
                     .completedAt(null)
@@ -387,6 +410,7 @@ class TicketControllerTest {
                     .andExpect(jsonPath("$.content[0].publicId").value(ticketPublicId.toString()))
                     .andExpect(jsonPath("$.content[0].title").value("Ticket X"))
                     .andExpect(jsonPath("$.content[0].status").value(TicketStatus.PENDING.name()))
+                    .andExpect(jsonPath("$.content[0].priority").value(TicketPriority.HIGH.name()))
                     .andExpect(jsonPath("$.content[0].solution").doesNotExist())
                     .andExpect(jsonPath("$.totalElements").value(1))
                     .andExpect(jsonPath("$.number").value(0))

@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.support;
 import br.com.luizbrand.worklog.client.Client;
 import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.tickets.Ticket;
+import br.com.luizbrand.worklog.tickets.enums.TicketPriority;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
 
@@ -18,6 +19,7 @@ public final class TicketTestBuilder {
     private String solution = null;
     private LocalDateTime completedAt = null;
     private TicketStatus status = TicketStatus.PENDING;
+    private TicketPriority priority = TicketPriority.MEDIUM;
     private Client client = ClientTestBuilder.aClient().build();
     private Systems system = SystemTestBuilder.aSystem().build();
     private User user = UserTestBuilder.aUser().build();
@@ -64,6 +66,11 @@ public final class TicketTestBuilder {
         return this;
     }
 
+    public TicketTestBuilder withPriority(TicketPriority priority) {
+        this.priority = priority;
+        return this;
+    }
+
     public TicketTestBuilder withClient(Client client) {
         this.client = client;
         return this;
@@ -93,6 +100,7 @@ public final class TicketTestBuilder {
                 .solution(solution)
                 .completedAt(completedAt)
                 .status(status)
+                .priority(priority)
                 .client(client)
                 .system(system)
                 .user(user)

@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.tickets.dto;
 
+import br.com.luizbrand.worklog.tickets.enums.TicketPriority;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,6 +21,8 @@ public record TicketRequest(
         UUID clientId,
         @NotNull(message = "O sistema é obrigatório")
         UUID systemId,
-        UUID userId
+        UUID userId,
+        @NotNull(message = "A prioridade é obrigatória")
+        TicketPriority priority
         ) {
 }

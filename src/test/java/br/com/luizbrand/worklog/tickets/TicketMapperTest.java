@@ -15,6 +15,7 @@ import br.com.luizbrand.worklog.tickets.dto.TicketRequest;
 import br.com.luizbrand.worklog.tickets.dto.TicketResponse;
 import br.com.luizbrand.worklog.tickets.dto.TicketSummary;
 import br.com.luizbrand.worklog.tickets.enums.FieldType;
+import br.com.luizbrand.worklog.tickets.enums.TicketPriority;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
 import br.com.luizbrand.worklog.user.UserMapper;
@@ -76,7 +77,8 @@ class TicketMapperTest {
                     null,
                     TicketStatus.PENDING,
                     null,
-                    UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+                    UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                    TicketPriority.HIGH);
 
             Ticket ticket = ticketMapper.toEntity(request);
 
@@ -85,6 +87,7 @@ class TicketMapperTest {
             assertThat(ticket.getDescription()).isEqualTo(request.description());
             assertThat(ticket.getSolution()).isNull();
             assertThat(ticket.getStatus()).isEqualTo(TicketStatus.PENDING);
+            assertThat(ticket.getPriority()).isEqualTo(TicketPriority.HIGH);
             assertThat(ticket.getCompletedAt()).isNull();
             assertThat(ticket.getId()).isNull();
             assertThat(ticket.getPublicId()).isNull();
@@ -109,6 +112,7 @@ class TicketMapperTest {
                     .withDescription("Desc X")
                     .withSolution("Sol X")
                     .withStatus(TicketStatus.COMPLETED)
+                    .withPriority(TicketPriority.HIGH)
                     .withCompletedAt(completion)
                     .withClient(client).withSystem(system).withUser(user)
                     .build();
@@ -128,6 +132,7 @@ class TicketMapperTest {
             assertThat(response.description()).isEqualTo("Desc X");
             assertThat(response.solution()).isEqualTo("Sol X");
             assertThat(response.status()).isEqualTo(TicketStatus.COMPLETED);
+            assertThat(response.priority()).isEqualTo(TicketPriority.HIGH);
             assertThat(response.completedAt()).isEqualTo(completion);
             assertThat(response.createdAt()).isEqualTo(ticket.getCreatedAt());
             assertThat(response.updatedAt()).isEqualTo(ticket.getUpdatedAt());
@@ -160,6 +165,7 @@ class TicketMapperTest {
                     .withDescription("Desc X")
                     .withSolution("Sol X")
                     .withStatus(TicketStatus.COMPLETED)
+                    .withPriority(TicketPriority.LOW)
                     .withCompletedAt(completion)
                     .withClient(client).withSystem(system).withUser(user)
                     .build();
@@ -178,6 +184,7 @@ class TicketMapperTest {
             assertThat(summary.title()).isEqualTo("Ticket X");
             assertThat(summary.description()).isEqualTo("Desc X");
             assertThat(summary.status()).isEqualTo(TicketStatus.COMPLETED);
+            assertThat(summary.priority()).isEqualTo(TicketPriority.LOW);
             assertThat(summary.createdAt()).isEqualTo(ticket.getCreatedAt());
             assertThat(summary.updatedAt()).isEqualTo(ticket.getUpdatedAt());
             assertThat(summary.completedAt()).isEqualTo(completion);

@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.tickets;
 import br.com.luizbrand.worklog.client.Client;
 import br.com.luizbrand.worklog.shared.BaseEntity;
 import br.com.luizbrand.worklog.system.Systems;
+import br.com.luizbrand.worklog.tickets.enums.TicketPriority;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
 import jakarta.persistence.*;
@@ -38,6 +39,10 @@ public class Ticket extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private TicketStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TicketPriority priority;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)

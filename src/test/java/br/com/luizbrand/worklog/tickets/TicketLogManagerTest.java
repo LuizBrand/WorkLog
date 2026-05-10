@@ -9,6 +9,7 @@ import br.com.luizbrand.worklog.support.UserTestBuilder;
 import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.tickets.dto.TicketLogResponse;
 import br.com.luizbrand.worklog.tickets.enums.FieldType;
+import br.com.luizbrand.worklog.tickets.enums.TicketPriority;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import br.com.luizbrand.worklog.user.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -178,6 +179,23 @@ class TicketLogManagerTest {
             assertThat(logs.get(0).getFieldType()).isEqualTo(FieldType.STRING);
             assertThat(logs.get(0).getOldValue()).isEqualTo(TicketStatus.PENDING.name());
             assertThat(logs.get(0).getNewValue()).isEqualTo(TicketStatus.COMPLETED.name());
+        }
+
+        @Test
+        @DisplayName("Should log a STRING entry when the priority changes")
+        void shouldLogPriorityChange() {
+            Ticket oldTicket = baseTicket();
+            Ticket newTicket = baseTicket();
+            newTicket.setPriority(TicketPriority.CRITICAL);
+
+            ticketLogManager.generateLogs(oldTicket, newTicket, currentUser);
+
+            List<TicketLog> logs = capturedLogs();
+            assertThat(logs).hasSize(1);
+            assertThat(logs.get(0).getFieldChanged()).isEqualTo("priority");
+            assertThat(logs.get(0).getFieldType()).isEqualTo(FieldType.STRING);
+            assertThat(logs.get(0).getOldValue()).isEqualTo(TicketPriority.MEDIUM.name());
+            assertThat(logs.get(0).getNewValue()).isEqualTo(TicketPriority.CRITICAL.name());
         }
 
         @Test

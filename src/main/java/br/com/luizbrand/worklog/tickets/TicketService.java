@@ -132,6 +132,7 @@ public class TicketService {
                 .description(ticketRequest.description() != null ? ticketRequest.description() : existingTicket.getDescription())
                 .solution(ticketRequest.solution() != null ? ticketRequest.solution() : existingTicket.getSolution())
                 .status(ticketRequest.status() != null ? ticketRequest.status() : existingTicket.getStatus())
+                .priority(ticketRequest.priority() != null ? ticketRequest.priority() : existingTicket.getPriority())
                 .completedAt(ticketRequest.completedAt() != null ? ticketRequest.completedAt() : existingTicket.getCompletedAt())
                 .client(existingTicket.getClient())
                 .system(existingTicket.getSystem())
@@ -145,6 +146,7 @@ public class TicketService {
         if (request.description() != null) ticket.setDescription(request.description());
         if (request.solution() != null) ticket.setSolution(request.solution());
         if (request.status() != null) ticket.setStatus(request.status());
+        if (request.priority() != null) ticket.setPriority(request.priority());
         if (request.completedAt() != null) ticket.setCompletedAt(request.completedAt());
         if (reassignedUser != null) ticket.setUser(reassignedUser);
     }

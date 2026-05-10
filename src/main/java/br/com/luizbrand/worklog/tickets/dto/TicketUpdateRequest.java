@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.tickets.dto;
 
+import br.com.luizbrand.worklog.tickets.enums.TicketPriority;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 
 import java.time.LocalDateTime;
@@ -11,6 +12,7 @@ public record TicketUpdateRequest(
         String solution,
         TicketStatus status,
         LocalDateTime completedAt,
-        UUID userId
+        UUID userId,
+        TicketPriority priority
 ) {
 }
