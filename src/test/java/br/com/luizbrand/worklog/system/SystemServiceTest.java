@@ -46,7 +46,7 @@ class SystemServiceTest {
     @BeforeEach
     void setUp() {
         system = SystemTestBuilder.aSystem().withName("Billing").build();
-        systemResponse = new SystemResponse(system.getPublicId(), system.getName());
+        systemResponse = new SystemResponse(system.getPublicId(), system.getName(), true);
     }
 
     @Nested
@@ -57,7 +57,7 @@ class SystemServiceTest {
         @DisplayName("Should return the mapped list when systems exist")
         void shouldReturnMappedList() {
             Systems other = SystemTestBuilder.aSystem().withName("CRM").build();
-            SystemResponse otherResponse = new SystemResponse(other.getPublicId(), other.getName());
+            SystemResponse otherResponse = new SystemResponse(other.getPublicId(), other.getName(), true);
 
             when(systemRepository.findAll()).thenReturn(List.of(system, other));
             when(systemMapper.toSystemResponse(system)).thenReturn(systemResponse);

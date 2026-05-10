@@ -14,6 +14,7 @@ public abstract class SystemMapper {
     @Mapping(target = "updatedAt", ignore = true)
     public abstract Systems toSystem(SystemRequest systemRequest);
 
+    @Mapping(source = "isEnabled", target = "enabled")
     public abstract SystemResponse toSystemResponse(Systems system);
 
     @Mapping(target = "id", ignore = true)

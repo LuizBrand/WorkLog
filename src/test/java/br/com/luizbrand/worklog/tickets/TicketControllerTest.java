@@ -112,7 +112,7 @@ class TicketControllerTest {
                 .updatedAt(createdAt)
                 .completedAt(null)
                 .client(new ClientSummary(clientPublicId, "Acme", true))
-                .system(new SystemResponse(systemPublicId, "Billing"))
+                .system(new SystemResponse(systemPublicId, "Billing", true))
                 .user(new UserSummary(userPublicId, "Assignee", "assignee@worklog.test"))
                 .build();
     }

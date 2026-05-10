@@ -57,7 +57,7 @@ class SystemControllerTest {
     @BeforeEach
     void setUp() {
         systemPublicId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690da4ef0");
-        systemResponse = new SystemResponse(systemPublicId, "Billing");
+        systemResponse = new SystemResponse(systemPublicId, "Billing", true);
     }
 
     @Nested
@@ -67,7 +67,7 @@ class SystemControllerTest {
         @Test
         @DisplayName("Should return 200 OK with the list of systems")
         void shouldReturnSystemsList() throws Exception {
-            SystemResponse other = new SystemResponse(UUID.randomUUID(), "CRM");
+            SystemResponse other = new SystemResponse(UUID.randomUUID(), "CRM", true);
             when(systemService.findAllSystems()).thenReturn(List.of(systemResponse, other));
 
             mockMvc.perform(get("/systems").accept(MediaType.APPLICATION_JSON))
@@ -92,7 +92,19 @@ class SystemControllerTest {
             mockMvc.perform(get("/systems/{publicId}", systemPublicId).accept(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.publicId").value(systemPublicId.toString()))
-                    .andExpect(jsonPath("$.name").value("Billing"));
+                    .andExpect(jsonPath("$.name").value("Billing"))
+                    .andExpect(jsonPath("$.enabled").value(true));
+        }
+
+        @Test
+        @DisplayName("Should expose enabled=false in the JSON when the system is disabled")
+        void shouldExposeDisabledFlag() throws Exception {
+            SystemResponse disabled = new SystemResponse(systemPublicId, "Billing", false);
+            when(systemService.getSystemByPublicId(systemPublicId)).thenReturn(disabled);
+
+            mockMvc.perform(get("/systems/{publicId}", systemPublicId).accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.enabled").value(false));
         }
 
         @Test
@@ -162,7 +174,7 @@ class SystemControllerTest {
         @DisplayName("Should return 200 OK with the updated system on a valid request")
         void shouldReturn200OnSuccess() throws Exception {
             SystemRequest request = new SystemRequest("Billing v2");
-            SystemResponse updated = new SystemResponse(systemPublicId, "Billing v2");
+            SystemResponse updated = new SystemResponse(systemPublicId, "Billing v2", true);
             when(systemService.updateSystem(any(SystemRequest.class), eq(systemPublicId))).thenReturn(updated);
 
             mockMvc.perform(patch("/systems/{publicId}", systemPublicId)

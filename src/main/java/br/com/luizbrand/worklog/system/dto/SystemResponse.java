@@ -4,6 +4,7 @@ import java.util.UUID;
 
 public record SystemResponse(
         UUID publicId,
-        String name
+        String name,
+        boolean enabled
 ) {
 }

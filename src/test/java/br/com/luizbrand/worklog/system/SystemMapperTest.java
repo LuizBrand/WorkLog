@@ -44,7 +44,7 @@ class SystemMapperTest {
     class ToSystemResponseTests {
 
         @Test
-        @DisplayName("Should expose only publicId and name")
+        @DisplayName("Should expose publicId, name and enabled")
         void shouldMapSystemToResponse() {
             Systems system = SystemTestBuilder.aSystem()
                     .withName("CRM")
@@ -54,6 +54,31 @@ class SystemMapperTest {
 
             assertThat(response.publicId()).isEqualTo(system.getPublicId());
             assertThat(response.name()).isEqualTo("CRM");
+            assertThat(response.enabled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should expose enabled=true when system is active")
+        void shouldMapEnabledTrue() {
+            Systems system = SystemTestBuilder.aSystem()
+                    .enabled(true)
+                    .build();
+
+            SystemResponse response = systemMapper.toSystemResponse(system);
+
+            assertThat(response.enabled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should expose enabled=false when system is disabled")
+        void shouldMapEnabledFalse() {
+            Systems system = SystemTestBuilder.aSystem()
+                    .disabled()
+                    .build();
+
+            SystemResponse response = systemMapper.toSystemResponse(system);
+
+            assertThat(response.enabled()).isFalse();
         }
 
         @Test

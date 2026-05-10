@@ -9,15 +9,6 @@ Atualizar conforme novos gaps forem identificados durante o desenvolvimento.
 
 ## Sistemas
 
-### 4. `SystemResponse` não expõe campo de status ativo/inativo
-
-**Onde falta:** `GET /systems` — schema `SystemResponse`  
-**O que falta:** campo `enabled` (ou equivalente) para indicar se o sistema está ativo  
-**Impacto:** no formulário de criação de ticket, sistemas inativos aparecem na lista de seleção junto com os ativos; não há como filtrar client-side sem esse campo  
-**Frontend:** `GET /clients` já suporta `?filtersParams.status=ATIVO` e foi aplicado no create dialog; aguardando equivalente para sistemas
-
----
-
 ## Clientes
 
 ### 5. `ClientRequest` não expõe campo `enabled` (sem endpoint de desativar/reativar)

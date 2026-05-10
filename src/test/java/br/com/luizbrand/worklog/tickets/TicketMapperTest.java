@@ -118,7 +118,7 @@ class TicketMapperTest {
                     .build();
 
             ClientSummary clientSummary = new ClientSummary(client.getPublicId(), client.getName(), true);
-            SystemResponse systemResponse = new SystemResponse(system.getPublicId(), system.getName());
+            SystemResponse systemResponse = new SystemResponse(system.getPublicId(), system.getName(), true);
             UserSummary userSummary = new UserSummary(user.getPublicId(), user.getName(), user.getEmail());
 
             when(clientMapper.toSummary(client)).thenReturn(clientSummary);
@@ -171,7 +171,7 @@ class TicketMapperTest {
                     .build();
 
             ClientSummary clientSummary = new ClientSummary(client.getPublicId(), client.getName(), true);
-            SystemResponse systemResponse = new SystemResponse(system.getPublicId(), system.getName());
+            SystemResponse systemResponse = new SystemResponse(system.getPublicId(), system.getName(), true);
             UserSummary userSummary = new UserSummary(user.getPublicId(), user.getName(), user.getEmail());
 
             when(clientMapper.toSummary(client)).thenReturn(clientSummary);

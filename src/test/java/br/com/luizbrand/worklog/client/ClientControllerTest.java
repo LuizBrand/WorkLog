@@ -71,7 +71,7 @@ class ClientControllerTest {
         publicId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690da4ef0");
         UUID systemId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690da4ef1");
         notFoundExpectedMessage =  "Client with public ID: " + nonExistenId + " not found";
-        SystemResponse systemResponse = new SystemResponse(systemId, "System Name");
+        SystemResponse systemResponse = new SystemResponse(systemId, "System Name", true);
 
         clientResponse = new ClientResponse(
                 publicId,
