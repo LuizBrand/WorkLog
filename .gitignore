@@ -32,7 +32,12 @@ build/
 
 ### VS Code ###
 .vscode/
-.claude/settings.local.json
+
+# Claude Code — local notes/plans/seeds; only settings.json and hooks/ are versioned
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+
 mvnw
 
 # added by agent-md installer
