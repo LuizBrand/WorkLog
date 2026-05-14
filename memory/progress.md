@@ -13,6 +13,13 @@ changed without an update here.
 - **Frontend coordination required (Phase 7 prerequisite for Fix B):** drop `localStorage` token persistence (`src/state/auth.ts`), drop the `Authorization: Bearer` Axios interceptor (`src/lib/api.ts`), add `withCredentials: true` on Axios calls.
 
 ## Session log
+- [x] 2026-05-13 — `priority` filter on `GET /tickets` implemented TDD (ad-hoc, outside any phased plan). User noticed `TicketPriority` already existed on the entity but was missing from `TicketFiltersParams`/`TicketSpecification`.
+  - `TicketFiltersParams` adds `TicketPriority priority` as the 3rd positional field (after `status`, before `clientId`) — semantic placement next to the other ticket-attribute filter. Updated 16 positional ctor calls (1 in `TicketService.applyVisibilityRules`, 13 in `TicketSpecificationTest`, 3 in `TicketServiceTest`) to insert a `null` placeholder; mechanical, no behavior change.
+  - Tests first: `TicketSpecificationTest.shouldFilterByPriority` (asserts `equal(root.get("priority"), TicketPriority.HIGH)`) + `TicketControllerTest.shouldReturnPagedSummaries` extended with `?priority=HIGH` query-param binding assertion. Watched red on the spec test (controller test passed because Spring auto-binds the new record component), then implemented the predicate in `TicketSpecification` between the `status` and `clientId` blocks.
+  - `TicketControllerDocs` description updated to list "prioridade" alongside the other filters.
+  - Suite: 238/238 green (237 → 238, +1 = the new spec test).
+  - Shipped as `b670e3e` `feat(tickets): add priority filter to GET /tickets`.
+
 - [x] 2026-05-10 — Fix A (post-Phase-7 audit): switched `OpenApiConfig` from the now-bogus Bearer JWT security scheme to an API-key cookie scheme (`type: APIKEY`, `in: COOKIE`, name: `worklog_access`). Swagger UI's "Authorize" button no longer prompts for a Bearer token. New `OpenApiConfigTest` (3 cases: cookie scheme, global requirement references the cookie scheme, legacy bearer scheme is absent). Watched red on the cookie test (current config had Bearer JWT), then green after the swap. Suite: 237/237 (234 → 237, +3). Also wrote `.claude/csrf-protection-plan.md` for Fix B (CSRF tokens via `CookieCsrfTokenRepository.withHttpOnlyFalse()`, coordinated with frontend Axios `xsrfCookieName`/`xsrfHeaderName` defaults). Shipped as `4269a3c` `docs(openapi): describe auth as HttpOnly cookie scheme`.
 
 - [x] 2026-05-10 — Backend gaps Phase 7c (CORS for credentialed cookies + cookie yaml config) implemented TDD; shipped as `44cbb34`.
