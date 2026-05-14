@@ -540,7 +540,7 @@ class TicketServiceTest {
                     .build();
             Pageable pageable = PageRequest.of(0, 10);
             TicketFiltersParams filters = new TicketFiltersParams(
-                    "login", TicketStatus.PENDING,
+                    "login", TicketStatus.PENDING, null,
                     client.getPublicId(), system.getPublicId(), user.getPublicId(),
                     LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30), null);
 
@@ -565,7 +565,7 @@ class TicketServiceTest {
         @DisplayName("Should return an empty page when the repository has no matches")
         void shouldReturnEmptyPage() {
             Pageable pageable = PageRequest.of(0, 10);
-            TicketFiltersParams filters = new TicketFiltersParams(null, null, null, null, null, null, null, null);
+            TicketFiltersParams filters = new TicketFiltersParams(null, null, null, null, null, null, null, null, null);
             when(ticketRepository.findAll(any(Specification.class), eq(pageable)))
                     .thenReturn(Page.empty(pageable));
 
@@ -613,7 +613,7 @@ class TicketServiceTest {
                                                   StatusFiltro expected) {
             Pageable pageable = PageRequest.of(0, 10);
             TicketFiltersParams filters = new TicketFiltersParams(
-                    null, null, null, null, null, null, null, requested);
+                    null, null, null, null, null, null, null, null, requested);
             Specification<Ticket> dummy = (Specification<Ticket>) Mockito.mock(Specification.class);
 
             try (MockedStatic<TicketSpecification> spec = Mockito.mockStatic(TicketSpecification.class)) {

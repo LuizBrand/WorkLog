@@ -1,6 +1,7 @@
 package br.com.luizbrand.worklog.tickets.dto;
 
 import br.com.luizbrand.worklog.client.enums.StatusFiltro;
+import br.com.luizbrand.worklog.tickets.enums.TicketPriority;
 import br.com.luizbrand.worklog.tickets.enums.TicketStatus;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -10,6 +11,7 @@ import java.util.UUID;
 public record TicketFiltersParams(
         String title,
         TicketStatus status,
+        TicketPriority priority,
         UUID clientId,
         UUID systemId,
         UUID userId,

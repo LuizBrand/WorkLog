@@ -75,7 +75,7 @@ public class TicketService {
             return filters;
         }
         return new TicketFiltersParams(
-                filters.title(), filters.status(),
+                filters.title(), filters.status(), filters.priority(),
                 filters.clientId(), filters.systemId(), filters.userId(),
                 filters.createdFrom(), filters.createdTo(),
                 effective);

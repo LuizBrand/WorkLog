@@ -29,6 +29,10 @@ public class TicketSpecification {
                 predicates.add(criteriaBuilder.equal(root.get("status"), filters.status()));
             }
 
+            if (filters.priority() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("priority"), filters.priority()));
+            }
+
             if (filters.clientId() != null) {
                 Join<Ticket, Client> clientJoin = root.join("client");
                 predicates.add(criteriaBuilder.equal(clientJoin.get("publicId"), filters.clientId()));

@@ -395,6 +395,7 @@ class TicketControllerTest {
             mockMvc.perform(get("/tickets")
                             .param("title", "Login")
                             .param("status", "PENDING")
+                            .param("priority", "HIGH")
                             .param("clientId", clientPublicId.toString())
                             .param("systemId", systemPublicId.toString())
                             .param("userId", userPublicId.toString())
@@ -425,6 +426,7 @@ class TicketControllerTest {
             TicketFiltersParams filters = filtersCaptor.getValue();
             assertThat(filters.title()).isEqualTo("Login");
             assertThat(filters.status()).isEqualTo(TicketStatus.PENDING);
+            assertThat(filters.priority()).isEqualTo(TicketPriority.HIGH);
             assertThat(filters.clientId()).isEqualTo(clientPublicId);
             assertThat(filters.systemId()).isEqualTo(systemPublicId);
             assertThat(filters.userId()).isEqualTo(userPublicId);

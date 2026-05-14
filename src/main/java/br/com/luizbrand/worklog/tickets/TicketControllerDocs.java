@@ -25,7 +25,7 @@ import java.util.UUID;
 public interface TicketControllerDocs {
 
     @Operation(summary = "Listar tickets",
-            description = "Retorna uma página de tickets (resumo) com filtros opcionais por título, status, cliente, sistema, usuário, faixa de datas de criação e visibilidade. "
+            description = "Retorna uma página de tickets (resumo) com filtros opcionais por título, status, prioridade, cliente, sistema, usuário, faixa de datas de criação e visibilidade. "
                     + "O parâmetro `visibility` (ATIVO/INATIVO/TODOS) só é honrado para usuários ADMIN; usuários comuns sempre veem apenas tickets ativos.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Página de tickets",
