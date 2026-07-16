@@ -6,6 +6,7 @@ import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -41,9 +42,14 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .cors(Customizer.withDefaults())
+                // CSRF desabilitado de propósito: a auth é por cookie HttpOnly e a
+                // proteção contra CSRF depende de SameSite=Strict + Secure=true nos
+                // cookies (ver AuthCookieService / worklog.cookies em application-prod).
+                // Se um dia os cookies mudarem para SameSite=None, reavaliar CSRF.
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests( authorize -> authorize
+                        .requestMatchers(HttpMethod.POST, "/worklog/auth/register").hasRole("ADMIN")
                         .requestMatchers("/worklog/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated())

@@ -18,12 +18,13 @@ import org.springframework.http.ResponseEntity;
 public interface AuthControllerDocs {
 
     @Operation(summary = "Registrar novo usuário",
-            description = "Cria um novo usuário com a role padrão USER. O email deve ser único no sistema.")
+            description = "Cria um novo usuário com a role padrão USER. Requer autenticação como ADMIN. O email deve ser único no sistema.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Usuário registrado com sucesso",
                     content = @Content(schema = @Schema(implementation = RegisterResponse.class))),
             @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos",
                     content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer role ADMIN"),
             @ApiResponse(responseCode = "409", description = "Email já cadastrado",
                     content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class)))
     })

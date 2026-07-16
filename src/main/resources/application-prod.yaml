@@ -8,6 +8,12 @@ spring:
       ddl-auto: validate
     show-sql: false
 
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 worklog:
   cors:
     allowed-origins: ${WORKLOG_CORS_ORIGINS}
