@@ -1,0 +1,19 @@
+# Mantém o contexto de build enxuto e, principalmente, fora segredos.
+target/
+.git/
+.github/
+.idea/
+.vscode/
+.mvn/
+mvnw
+mvnw.cmd
+*.iml
+memory/
+.claude/
+.agent/
+HELP.md
+
+# Nunca enviar arquivos de ambiente para o daemon do Docker.
+.env
+.env.*
+!.env.*.example

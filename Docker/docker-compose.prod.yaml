@@ -1,0 +1,68 @@
+# Stack de produção do backend WorkLog (app + Postgres + Redis).
+#
+# Rodar na VPS a partir do diretório do repositório:
+#   docker compose -f Docker/docker-compose.prod.yaml --env-file Docker/.env.prod up -d --build
+#
+# Postgres e Redis NÃO publicam portas: só existem na rede interna do compose.
+# O app é publicado apenas em 127.0.0.1:8080 — quem expõe para a internet é o
+# reverse proxy (nginx/Caddy com TLS) rodando no host.
+#
+# Nome de projeto próprio: mantém esta stack isolada do compose de dev
+# (Docker/docker-compose.yaml), que também define os serviços postgres/redis.
+name: worklog-prod
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - worklog
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - worklog
+    restart: unless-stopped
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    env_file:
+      - .env.prod
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - worklog
+    restart: unless-stopped
+
+networks:
+  worklog:
+    driver: bridge
+
+volumes:
+  pgdata:
