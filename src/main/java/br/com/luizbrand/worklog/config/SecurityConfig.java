@@ -27,7 +27,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
-@EnableConfigurationProperties(CookieProperties.class)
+@EnableConfigurationProperties({CookieProperties.class, AdminSeedProperties.class})
 public class SecurityConfig {
 
     private final AuthFilter authFilter;

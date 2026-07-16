@@ -24,6 +24,10 @@ security:
       expiration: ${JWT_REFRESH_EXPIRATION}
 
 worklog:
+  admin:
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
+    name: ${ADMIN_NAME:Admin}
   cors:
     allowed-origins:
       - http://localhost:3000
