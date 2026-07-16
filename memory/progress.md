@@ -29,7 +29,17 @@ changed without an update here.
     - `DataInitializer`: `System.out.println` → `logger.info`.
     - `AuthControllerDocs#register`: descrição atualizada (requer ADMIN) + resposta 403.
     - Suíte: 241/241 (238 → 241, +3 = testes de segurança do register).
-    - Shipped as `3aa78ab` `feat(security): restrict user registration to ADMIN`.
+    - Shipped as `3aa78ab` `feat(security): restrict user registration to ADMIN` (memory record `e1c7c60`).
+  - [x] **Fase 3 — containerização e rede (shipped `e9a9b6c`).**
+    - `Dockerfile` multi-stage: build `maven:3.9-eclipse-temurin-17` (`dependency:go-offline` p/ cache) → runtime `eclipse-temurin:17-jre-jammy`, usuário não-root, `COPY target/*.jar`, EXPOSE 8080.
+    - `.dockerignore`: contexto enxuto + **exclui `.env`/`.env.*`** do build (menos `*.example`).
+    - `Docker/docker-compose.prod.yaml`: app + postgres + redis em rede interna. **Postgres/Redis sem portas publicadas**; app só em `127.0.0.1:8080` (reverse proxy do host expõe). Healthchecks + `depends_on: service_healthy`. `name: worklog-prod` (isola do compose de dev, que compartilha diretório e nomes de serviço postgres/redis). **Sem `container_name` fixo** (evita colisão entre projetos).
+    - `Docker/.env.prod.example` (versionado): lista todas as env vars de prod (DB, DB_PROD_*, REDIS_HOST/PORT/PASSWORD, JWT_*, WORKLOG_CORS_ORIGINS) com hints (`openssl rand -base64 48` p/ JWT).
+    - `.gitignore`: `+.env.*` `+!.env.*.example` — o padrão `.env` antigo NÃO cobria `.env.prod`.
+    - **Smoke test real (fecha o pendente da Fase 1):** build da imagem + `up` da stack isolada; app subiu com profile **prod**, conectou em `postgres:5432`, rodou Flyway V1–V11, Redis ok, Tomcat 8080. Verificado por curl: portas de dados fechadas; `/register` anon→403; `GET /tickets` anon→403; swagger em prod→403 (bloqueado). Stack de teste derrubada (`down -v`), `.env.prod` descartável removido.
+    - Suíte: 241/241 (Fase 3 não altera Java/resources de runtime, só infra).
+    - Shipped as `e9a9b6c` `chore(docker): add prod Dockerfile and compose stack`.
+    - **Gotcha registrado:** rodar dois composes do mesmo diretório sem `name:`/`-p` distintos faz o compose tratar serviços homônimos (postgres/redis) como os mesmos e recriar os containers do outro projeto. Sempre isolar com `name:` no arquivo. (Corrigido: prod agora tem `name: worklog-prod`.)
 - [x] 2026-05-13 — `priority` filter on `GET /tickets` implemented TDD (ad-hoc, outside any phased plan). User noticed `TicketPriority` already existed on the entity but was missing from `TicketFiltersParams`/`TicketSpecification`.
   - `TicketFiltersParams` adds `TicketPriority priority` as the 3rd positional field (after `status`, before `clientId`) — semantic placement next to the other ticket-attribute filter. Updated 16 positional ctor calls (1 in `TicketService.applyVisibilityRules`, 13 in `TicketSpecificationTest`, 3 in `TicketServiceTest`) to insert a `null` placeholder; mechanical, no behavior change.
   - Tests first: `TicketSpecificationTest.shouldFilterByPriority` (asserts `equal(root.get("priority"), TicketPriority.HIGH)`) + `TicketControllerTest.shouldReturnPagedSummaries` extended with `?priority=HIGH` query-param binding assertion. Watched red on the spec test (controller test passed because Spring auto-binds the new record component), then implemented the predicate in `TicketSpecification` between the `status` and `clientId` blocks.
