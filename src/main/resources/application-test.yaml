@@ -16,3 +16,10 @@ spring:
 
   flyway:
     enabled: false
+
+security:
+  jwt:
+    secret-key: test-secret-key-not-used-in-production
+    expiration: 3600000
+    refresh-token:
+      expiration: 86400000
