@@ -13,6 +13,14 @@ changed without an update here.
 - **Frontend coordination required (Phase 7 prerequisite for Fix B):** drop `localStorage` token persistence (`src/state/auth.ts`), drop the `Authorization: Bearer` Axios interceptor (`src/lib/api.ts`), add `withCredentials: true` on Axios calls.
 
 ## Session log
+- [~] 2026-07-15 — **Prod-readiness plan** (`.claude/prod-readiness-plan.md`) started. Owner decisions: subdomínios same-site (`app.` / `api.`), `/register` → ADMIN, plano escrito antes de codar. 4 fases: (1) profile prod config, (2) hardening auth, (3) Docker/rede, (4) operação.
+  - [x] **Fase 1 — profile `prod` config (shipped `b8d2898`).** Bug: profile `prod` só tinha datasource/cors/cookies; `security.jwt.*` e `spring.data.redis.*` só existiam no `dev`, então `SPRING_PROFILES_ACTIVE=prod` quebrava auth (`HMAC256(null)`) e Redis caía em default sem senha.
+    - `application.yaml` (base): adicionado `security.jwt.*` com `${JWT_SECRET_KEY}` **sem default** (fail-fast em prod) + `spring.data.redis.*` (`host`/`port`/`password`) com defaults seguros (`localhost`/`6379`/vazio) para não quebrar `dev`/`test`.
+    - `application-dev.yaml`: removidos blocos JWT e Redis (agora herdados; `.env` de dev já fornece as vars).
+    - `application-test.yaml`: valores literais de JWT adicionados — o base agora exige `${JWT_SECRET_KEY}` e `WorklogApplicationTests` (`@SpringBootTest`, profile `test`) sobe o contexto completo.
+    - Verificação: suíte 238/238 verde (sem delta de contagem — mudança só de config). Smoke test real com profile `prod` adiado p/ Fase 3 (precisa de Postgres+Redis + `.env` de prod).
+    - Consequência p/ ops: `.env` de prod passa a exigir `JWT_SECRET_KEY`, `JWT_EXPIRATION`, `JWT_REFRESH_EXPIRATION` e `REDIS_HOST` (nome do serviço no compose, definido na Fase 3).
+    - Shipped as `b8d2898` `fix(config): define JWT and Redis in base profile so prod boots`.
 - [x] 2026-05-13 — `priority` filter on `GET /tickets` implemented TDD (ad-hoc, outside any phased plan). User noticed `TicketPriority` already existed on the entity but was missing from `TicketFiltersParams`/`TicketSpecification`.
   - `TicketFiltersParams` adds `TicketPriority priority` as the 3rd positional field (after `status`, before `clientId`) — semantic placement next to the other ticket-attribute filter. Updated 16 positional ctor calls (1 in `TicketService.applyVisibilityRules`, 13 in `TicketSpecificationTest`, 3 in `TicketServiceTest`) to insert a `null` placeholder; mechanical, no behavior change.
   - Tests first: `TicketSpecificationTest.shouldFilterByPriority` (asserts `equal(root.get("priority"), TicketPriority.HIGH)`) + `TicketControllerTest.shouldReturnPagedSummaries` extended with `?priority=HIGH` query-param binding assertion. Watched red on the spec test (controller test passed because Spring auto-binds the new record component), then implemented the predicate in `TicketSpecification` between the `status` and `clientId` blocks.
