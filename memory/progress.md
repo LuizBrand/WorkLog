@@ -20,7 +20,16 @@ changed without an update here.
     - `application-test.yaml`: valores literais de JWT adicionados — o base agora exige `${JWT_SECRET_KEY}` e `WorklogApplicationTests` (`@SpringBootTest`, profile `test`) sobe o contexto completo.
     - Verificação: suíte 238/238 verde (sem delta de contagem — mudança só de config). Smoke test real com profile `prod` adiado p/ Fase 3 (precisa de Postgres+Redis + `.env` de prod).
     - Consequência p/ ops: `.env` de prod passa a exigir `JWT_SECRET_KEY`, `JWT_EXPIRATION`, `JWT_REFRESH_EXPIRATION` e `REDIS_HOST` (nome do serviço no compose, definido na Fase 3).
-    - Shipped as `b8d2898` `fix(config): define JWT and Redis in base profile so prod boots`.
+    - Shipped as `b8d2898` `fix(config): define JWT and Redis in base profile so prod boots` (memory record `c1a1ec4`).
+  - [x] **Fase 2 — hardening de auth (shipped `3aa78ab`).**
+    - `/register` → ADMIN: `SecurityConfig` ganhou `.requestMatchers(POST, "/worklog/auth/register").hasRole("ADMIN")` antes do `permitAll` de `/worklog/auth/**`. Login/refresh/logout seguem públicos.
+    - TDD: novo `AuthRegisterSecurityTest` (`@SpringBootTest` + `@AutoConfigureMockMvc` com filtros reais, `@MockitoBean AuthService`, `.with(user().roles())`): anônimo→403, USER→403, ADMIN→201. Vermelho pelo motivo certo (endpoint aberto, 201 p/ todos), verde após a regra. Este é o **primeiro teste do repo que exercita as regras do filtro de segurança** — os `*ControllerTest` usam `addFilters=false` e não cobrem o gate (idem os outros endpoints ADMIN, que não têm teste de gate).
+    - Swagger fora do prod: `application-prod.yaml` com `springdoc.api-docs.enabled=false` + `swagger-ui.enabled=false`.
+    - CSRF: comentário pt-BR no `SecurityConfig` explicando que o disable é intencional e a mitigação é `SameSite=Strict`+`Secure` (não fui em `gotchas.md` — este é semanticamente "correções do humano", não design note).
+    - `DataInitializer`: `System.out.println` → `logger.info`.
+    - `AuthControllerDocs#register`: descrição atualizada (requer ADMIN) + resposta 403.
+    - Suíte: 241/241 (238 → 241, +3 = testes de segurança do register).
+    - Shipped as `3aa78ab` `feat(security): restrict user registration to ADMIN`.
 - [x] 2026-05-13 — `priority` filter on `GET /tickets` implemented TDD (ad-hoc, outside any phased plan). User noticed `TicketPriority` already existed on the entity but was missing from `TicketFiltersParams`/`TicketSpecification`.
   - `TicketFiltersParams` adds `TicketPriority priority` as the 3rd positional field (after `status`, before `clientId`) — semantic placement next to the other ticket-attribute filter. Updated 16 positional ctor calls (1 in `TicketService.applyVisibilityRules`, 13 in `TicketSpecificationTest`, 3 in `TicketServiceTest`) to insert a `null` placeholder; mechanical, no behavior change.
   - Tests first: `TicketSpecificationTest.shouldFilterByPriority` (asserts `equal(root.get("priority"), TicketPriority.HIGH)`) + `TicketControllerTest.shouldReturnPagedSummaries` extended with `?priority=HIGH` query-param binding assertion. Watched red on the spec test (controller test passed because Spring auto-binds the new record component), then implemented the predicate in `TicketSpecification` between the `status` and `clientId` blocks.
