@@ -7,6 +7,9 @@ target/
 .env.*
 !.env.*.example
 
+# Runbook de deploy local (não versionado)
+DEPLOYMENT.md
+
 ### STS ###
 .apt_generated
 .classpath
