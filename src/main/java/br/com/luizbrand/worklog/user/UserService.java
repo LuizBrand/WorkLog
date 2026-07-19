@@ -1,6 +1,5 @@
 package br.com.luizbrand.worklog.user;
 
-import br.com.luizbrand.worklog.auth.refreshtoken.RefreshToken;
 import br.com.luizbrand.worklog.auth.refreshtoken.RefreshTokenService;
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.NotFound.UserNotFoundException;
@@ -67,13 +66,12 @@ public class UserService {
             throw new BusinessException("Senha atual incorreta");
         }
 
-        RefreshToken stored = refreshTokenService.findByToken(request.refreshToken())
-                .filter(token -> token.getUserEmail().equals(currentUser.getEmail()))
-                .orElseThrow(() -> new BusinessException("Refresh token inválido para o usuário"));
-
         currentUser.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(currentUser);
-        refreshTokenService.deleteByToken(stored.getId());
+
+        // Troca de senha revoga todas as sessões do usuário: o próprio dispositivo
+        // e quaisquer outros precisam autenticar novamente com a nova senha.
+        refreshTokenService.deleteAllSessions(currentUser.getEmail());
     }
 
     public User findEntityByPublicId(UUID publicId) {

@@ -38,13 +38,14 @@ public interface UserControllerDocs {
     ResponseEntity<UserResponse> getMe(User currentUser);
 
     @Operation(summary = "Alterar a própria senha",
-            description = "Altera a senha do usuário autenticado e revoga o refresh token informado.")
+            description = "Altera a senha do usuário autenticado e revoga TODAS as sessões ativas " +
+                    "(refresh tokens) do usuário. Após o sucesso, o cliente deve fazer login novamente.")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Senha alterada com sucesso"),
+            @ApiResponse(responseCode = "204", description = "Senha alterada com sucesso; todas as sessões revogadas"),
             @ApiResponse(responseCode = "400", description = "Requisição inválida (campos obrigatórios ausentes ou inválidos)",
                     content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "422", description = "Senha atual incorreta ou refresh token inválido para o usuário",
+            @ApiResponse(responseCode = "422", description = "Senha atual incorreta",
                     content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class)))
     })
     ResponseEntity<Void> changeMyPassword(User currentUser, ChangePasswordRequest request);

@@ -1,6 +1,5 @@
 package br.com.luizbrand.worklog.user;
 
-import br.com.luizbrand.worklog.auth.refreshtoken.RefreshToken;
 import br.com.luizbrand.worklog.auth.refreshtoken.RefreshTokenService;
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.role.Role;
@@ -304,7 +303,6 @@ class UserServiceTest {
     class ChangeMyPassword {
 
         private User currentUser;
-        private RefreshToken storedToken;
         private ChangePasswordRequest request;
 
         @BeforeEach
@@ -314,20 +312,16 @@ class UserServiceTest {
                     .withPassword("encoded-current-password")
                     .build();
 
-            storedToken = new RefreshToken("user@gmail.com", 60_000L);
             request = new ChangePasswordRequest(
                     "current-plain",
-                    "new-strong-password",
-                    storedToken.getId());
+                    "new-strong-password");
         }
 
         @Test
-        @DisplayName("Should re-hash the password, persist the user and revoke the supplied refresh token on success")
-        void shouldRotatePasswordAndDeleteRefreshTokenOnHappyPath() {
+        @DisplayName("Should re-hash the password, persist the user and revoke all sessions on success")
+        void shouldRotatePasswordAndRevokeAllSessionsOnHappyPath() {
             when(passwordEncoder.matches("current-plain", "encoded-current-password"))
                     .thenReturn(true);
-            when(refreshTokenService.findByToken(storedToken.getId()))
-                    .thenReturn(Optional.of(storedToken));
             when(passwordEncoder.encode("new-strong-password"))
                     .thenReturn("encoded-new-password");
 
@@ -336,7 +330,7 @@ class UserServiceTest {
             ArgumentCaptor<User> userCaptor = forClass(User.class);
             verify(userRepository, times(1)).save(userCaptor.capture());
             assertEquals("encoded-new-password", userCaptor.getValue().getPassword());
-            verify(refreshTokenService, times(1)).deleteByToken(storedToken.getId());
+            verify(refreshTokenService, times(1)).deleteAllSessions("user@gmail.com");
         }
 
         @Test
@@ -350,48 +344,7 @@ class UserServiceTest {
 
             assertEquals("Senha atual incorreta", ex.getMessage());
             verify(userRepository, never()).save(any(User.class));
-            verify(refreshTokenService, never()).deleteByToken(anyString());
-            verify(refreshTokenService, never()).findByToken(anyString());
-            verify(passwordEncoder, never()).encode(anyString());
-        }
-
-        @Test
-        @DisplayName("Should throw BusinessException when the supplied refresh token does not exist")
-        void shouldThrowWhenRefreshTokenIsMissing() {
-            when(passwordEncoder.matches("current-plain", "encoded-current-password"))
-                    .thenReturn(true);
-            when(refreshTokenService.findByToken(storedToken.getId()))
-                    .thenReturn(Optional.empty());
-
-            BusinessException ex = assertThrows(BusinessException.class,
-                    () -> userService.changeMyPassword(currentUser, request));
-
-            assertEquals("Refresh token inválido para o usuário", ex.getMessage());
-            verify(userRepository, never()).save(any(User.class));
-            verify(refreshTokenService, never()).deleteByToken(anyString());
-            verify(passwordEncoder, never()).encode(anyString());
-        }
-
-        @Test
-        @DisplayName("Should throw BusinessException when the supplied refresh token belongs to another user")
-        void shouldThrowWhenRefreshTokenBelongsToOtherUser() {
-            RefreshToken otherToken = new RefreshToken("attacker@example.com", 60_000L);
-            ChangePasswordRequest stolen = new ChangePasswordRequest(
-                    "current-plain",
-                    "new-strong-password",
-                    otherToken.getId());
-
-            when(passwordEncoder.matches("current-plain", "encoded-current-password"))
-                    .thenReturn(true);
-            when(refreshTokenService.findByToken(otherToken.getId()))
-                    .thenReturn(Optional.of(otherToken));
-
-            BusinessException ex = assertThrows(BusinessException.class,
-                    () -> userService.changeMyPassword(currentUser, stolen));
-
-            assertEquals("Refresh token inválido para o usuário", ex.getMessage());
-            verify(userRepository, never()).save(any(User.class));
-            verify(refreshTokenService, never()).deleteByToken(anyString());
+            verify(refreshTokenService, never()).deleteAllSessions(anyString());
             verify(passwordEncoder, never()).encode(anyString());
         }
     }

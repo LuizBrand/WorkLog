@@ -32,4 +32,9 @@ public class RefreshTokenService {
     public void deleteByToken(String token) {
         refreshRepo.deleteById(token);
     }
+
+    // Revoga todas as sessões (refresh tokens) do usuário — usado na troca de senha.
+    public void deleteAllSessions(String userEmail) {
+        refreshRepo.deleteByUserEmail(userEmail);
+    }
 }

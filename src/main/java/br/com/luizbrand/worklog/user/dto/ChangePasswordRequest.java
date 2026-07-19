@@ -12,6 +12,5 @@ public record ChangePasswordRequest(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$",
                 message = "A senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número."
         )
-        String newPassword,
-        @NotBlank String refreshToken) {
+        String newPassword) {
 }

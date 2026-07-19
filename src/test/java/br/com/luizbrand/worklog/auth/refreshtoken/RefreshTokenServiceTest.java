@@ -102,4 +102,19 @@ class RefreshTokenServiceTest {
             verify(refreshRepo, times(1)).deleteById(tokenId);
         }
     }
+
+    @Nested
+    @DisplayName("Method: deleteAllSessions()")
+    class DeleteAllSessionsTests {
+
+        @Test
+        @DisplayName("Should delegate deletion of every token bound to the user email")
+        void shouldDelegateDeletionByUserEmail() {
+            String email = "user@worklog.test";
+
+            refreshTokenService.deleteAllSessions(email);
+
+            verify(refreshRepo, times(1)).deleteByUserEmail(email);
+        }
+    }
 }

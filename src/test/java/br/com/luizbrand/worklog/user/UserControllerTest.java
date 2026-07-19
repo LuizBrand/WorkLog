@@ -251,8 +251,7 @@ class UserControllerTest {
 
             validRequest = new ChangePasswordRequest(
                     "current-plain",
-                    "NewStrong1Password",
-                    UUID.randomUUID().toString());
+                    "NewStrong1Password");
         }
 
         @AfterEach
@@ -294,7 +293,7 @@ class UserControllerTest {
         @DisplayName("Should return 400 Bad Request when the body is missing required fields")
         void shouldReturnBadRequestWhenBodyIsInvalid() throws Exception {
 
-            ChangePasswordRequest invalid = new ChangePasswordRequest(" ", "short", " ");
+            ChangePasswordRequest invalid = new ChangePasswordRequest(" ", "short");
 
             mockMvc.perform(post("/users/me/change-password")
                             .contentType(MediaType.APPLICATION_JSON)
