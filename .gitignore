@@ -10,6 +10,10 @@ target/
 # Runbook de deploy local (não versionado)
 DEPLOYMENT.md
 
+# Planos de trabalho locais (não versionados)
+PLANO-*.md
+FASE-*.md
+
 ### STS ###
 .apt_generated
 .classpath
