@@ -28,6 +28,11 @@
 # shellcheck source=.claude/hooks/_lib.sh
 . "$(dirname "$0")/_lib.sh"
 
+# Os comandos de verificação são relativos à raiz (ex.: `./mvnw test`), assim
+# como as heurísticas de detecção (tsconfig.json, Cargo.toml, package.json).
+# O hook não recebe garantia de CWD, então fixamos a raiz do projeto aqui.
+cd "$(project_root)" || exit 0
+
 # Read and discard stdin — Claude sends JSON but we don't branch on it.
 cat > /dev/null
 

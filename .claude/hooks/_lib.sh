@@ -37,9 +37,20 @@ read_toml() {
   ' "$file"
 }
 
+# project_root — raiz do projeto, derivada da localização deste arquivo
+# (<raiz>/.claude/hooks/_lib.sh). Não depende do CWD com que o hook foi
+# invocado; cai em CLAUDE_PROJECT_DIR e depois no CWD como último recurso.
+project_root() {
+  local self="${BASH_SOURCE[0]:-$0}" dir
+  dir=$(cd "$(dirname "$self")/../.." 2>/dev/null && pwd)
+  echo "${dir:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+}
+
 # toml_path — location of the config file (override with AGENT_MD_TOML env)
+# Caminho absoluto: um relativo só resolvia quando o hook rodava com o CWD
+# na raiz do projeto, e nesse caso os checks eram silenciosamente pulados.
 toml_path() {
-  echo "${AGENT_MD_TOML:-agent-md.toml}"
+  echo "${AGENT_MD_TOML:-$(project_root)/agent-md.toml}"
 }
 
 # stat_mtime <path> — portable mtime in epoch seconds (Linux + macOS).
