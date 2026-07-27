@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.client;
 import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
+import br.com.luizbrand.worklog.client.dto.ClientUpdateRequest;
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.system.SystemService;
@@ -71,7 +72,7 @@ public class ClientService {
     }
 
     @Transactional
-    public ClientResponse updateClient(UUID publicId, ClientRequest clientRequest) {
+    public ClientResponse updateClient(UUID publicId, ClientUpdateRequest clientUpdateRequest) {
         Optional<Client> clientOpt = clientRepository.findByPublicId(publicId);
 
         if (clientOpt.isEmpty()) {
@@ -80,7 +81,7 @@ public class ClientService {
 
         Client client = clientOpt.get();
         List<Systems> associatedSystems = null;
-        List<UUID> systemsPublicIds = clientRequest.systemsPublicIds();
+        List<UUID> systemsPublicIds = clientUpdateRequest.systemsPublicIds();
 
         if (systemsPublicIds != null) {
             associatedSystems = new ArrayList<>(); // se não veio null, o padrão é uma lista vazia
@@ -89,7 +90,7 @@ public class ClientService {
             }
         }
 
-        clientMapper.updateClient(clientRequest, associatedSystems, client);
+        clientMapper.updateClient(clientUpdateRequest, associatedSystems, client);
         Client savedClient = clientRepository.save(client);
         return clientMapper.toClientResponse(savedClient);
     }

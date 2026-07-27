@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.client;
 import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
+import br.com.luizbrand.worklog.client.dto.ClientUpdateRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,8 +41,8 @@ public class ClientController implements ClientControllerDocs {
     }
 
     @PatchMapping("/{publicId}")
-    public ResponseEntity<ClientResponse> updateClient(@RequestBody @Valid ClientRequest clientRequest, @PathVariable UUID publicId) {
-        return ResponseEntity.ok( clientService.updateClient(publicId, clientRequest));
+    public ResponseEntity<ClientResponse> updateClient(@RequestBody @Valid ClientUpdateRequest clientUpdateRequest, @PathVariable UUID publicId) {
+        return ResponseEntity.ok( clientService.updateClient(publicId, clientUpdateRequest));
     }
 
     @DeleteMapping("/{publicId}")

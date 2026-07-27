@@ -6,9 +6,12 @@ import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
 import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
+import br.com.luizbrand.worklog.client.dto.ClientUpdateRequest;
+import br.com.luizbrand.worklog.client.enums.ClientType;
 import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import br.com.luizbrand.worklog.exception.Conflict.ClientAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.ClientNotFoundException;
+import br.com.luizbrand.worklog.support.ClientRequestTestBuilder;
 import br.com.luizbrand.worklog.system.dto.SystemResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +34,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
+import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.aClientRequest;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -76,12 +80,28 @@ class ClientControllerTest {
 
         clientResponse = new ClientResponse(
                 publicId,
+                ClientType.PJ,
                 "Client Name",
+                null,
+                null,
                 true,
                 mockDate,
-                List.of(systemResponse)
+                List.of(systemResponse),
+                List.of()
         );
 
+    }
+
+    private static ClientResponse withName(ClientResponse source, String name) {
+        return new ClientResponse(source.publicId(), source.tipo(), name, source.nomeFantasia(),
+                source.regimeTributario(), source.enabled(), source.createdAt(),
+                source.systems(), source.branches());
+    }
+
+    private static ClientResponse disabled(ClientResponse source) {
+        return new ClientResponse(source.publicId(), source.tipo(), source.name(), source.nomeFantasia(),
+                source.regimeTributario(), false, source.createdAt(),
+                source.systems(), source.branches());
     }
 
 
@@ -129,14 +149,9 @@ class ClientControllerTest {
         @DisplayName("Should return 200 OK and an updated client")
         void shouldReturnAnUpdatedClientWhenClientExists() throws Exception {
 
-            ClientRequest clientRequest = new ClientRequest("Updated Client Name", List.of(publicId), null);
-            ClientResponse clientUpdated = new ClientResponse(
-                    clientResponse.publicId(),
-                    clientRequest.name(),
-                    clientResponse.enabled(),
-                    clientResponse.createdAt(),
-                    clientResponse.systems()
-            );
+            ClientUpdateRequest clientRequest = new ClientUpdateRequest(
+                    null, "Updated Client Name", null, null, List.of(publicId), null);
+            ClientResponse clientUpdated = withName(clientResponse, clientRequest.name());
 
             when(clientService.updateClient(clientResponse.publicId(), clientRequest)).thenReturn(clientUpdated);
 
@@ -155,7 +170,8 @@ class ClientControllerTest {
         @Test
         @DisplayName("Should return 404 Not Found when updating a non-existent client")
         void shouldReturn404WhenUpdatingMissingClient() throws Exception {
-            ClientRequest clientRequest = new ClientRequest("Updated Client Name", List.of(publicId), null);
+            ClientUpdateRequest clientRequest = new ClientUpdateRequest(
+                    null, "Updated Client Name", null, null, List.of(publicId), null);
             when(clientService.updateClient(nonExistenId, clientRequest))
                     .thenThrow(new ClientNotFoundException(notFoundExpectedMessage));
 
@@ -170,14 +186,9 @@ class ClientControllerTest {
         @DisplayName("Should return 200 OK with enabled=false when PATCH carries enabled=false")
         void shouldReturnDisabledWhenPatchSetsEnabledFalse() throws Exception {
             UUID systemId = clientResponse.systems().get(0).publicId();
-            ClientRequest clientRequest = new ClientRequest("Client Name", List.of(systemId), false);
-            ClientResponse clientUpdated = new ClientResponse(
-                    clientResponse.publicId(),
-                    clientResponse.name(),
-                    false,
-                    clientResponse.createdAt(),
-                    clientResponse.systems()
-            );
+            ClientUpdateRequest clientRequest = new ClientUpdateRequest(
+                    null, "Client Name", null, null, List.of(systemId), false);
+            ClientResponse clientUpdated = disabled(clientResponse);
 
             when(clientService.updateClient(clientResponse.publicId(), clientRequest)).thenReturn(clientUpdated);
 
@@ -244,7 +255,7 @@ class ClientControllerTest {
         @DisplayName("Should return 201 Created with the new client on a valid request")
         void shouldReturn201OnSuccess() throws Exception {
             UUID systemId = clientResponse.systems().get(0).publicId();
-            ClientRequest request = new ClientRequest("Client Name", List.of(systemId), null);
+            ClientRequest request = aClientRequest().withName("Client Name").withSystem(systemId).build();
 
             when(clientService.createClient(any(ClientRequest.class))).thenReturn(clientResponse);
 
@@ -260,7 +271,7 @@ class ClientControllerTest {
         @DisplayName("Should return 409 Conflict when the name already exists")
         void shouldReturn409OnDuplicate() throws Exception {
             UUID systemId = clientResponse.systems().get(0).publicId();
-            ClientRequest request = new ClientRequest("Client Name", List.of(systemId), null);
+            ClientRequest request = aClientRequest().withName("Client Name").withSystem(systemId).build();
             String message = "Client with name: Client Name already exists";
             when(clientService.createClient(any(ClientRequest.class)))
                     .thenThrow(new ClientAlreadyExistsException(message));
@@ -276,7 +287,7 @@ class ClientControllerTest {
         @DisplayName("Should return 400 Bad Request when the name is blank")
         void shouldReturn400OnBlankName() throws Exception {
             UUID systemId = clientResponse.systems().get(0).publicId();
-            ClientRequest invalid = new ClientRequest("", List.of(systemId), null);
+            ClientRequest invalid = aClientRequest().withName("").withSystem(systemId).build();
 
             mockMvc.perform(post("/clients/")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -288,7 +299,50 @@ class ClientControllerTest {
         @Test
         @DisplayName("Should return 400 Bad Request when systemsPublicIds is empty")
         void shouldReturn400OnEmptySystems() throws Exception {
-            ClientRequest invalid = new ClientRequest("Client Name", List.of(), null);
+            ClientRequest invalid = aClientRequest().withName("Client Name").withSystems(List.of()).build();
+
+            mockMvc.perform(post("/clients/")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalid)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
+
+        @Test
+        @DisplayName("Should return 400 Bad Request when tipo is missing")
+        void shouldReturn400OnMissingTipo() throws Exception {
+            UUID systemId = clientResponse.systems().get(0).publicId();
+            ClientRequest invalid = aClientRequest().withTipo(null).withSystem(systemId).build();
+
+            mockMvc.perform(post("/clients/")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalid)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
+
+        @Test
+        @DisplayName("Should return 400 Bad Request when no branch is informed")
+        void shouldReturn400OnEmptyBranches() throws Exception {
+            UUID systemId = clientResponse.systems().get(0).publicId();
+            ClientRequest invalid = aClientRequest().withSystem(systemId).withBranches(List.of()).build();
+
+            mockMvc.perform(post("/clients/")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalid)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
+
+        @Test
+        @DisplayName("Should return 400 Bad Request when the branch document does not match the client type")
+        void shouldReturn400OnInvalidDocumento() throws Exception {
+            UUID systemId = clientResponse.systems().get(0).publicId();
+            ClientRequest invalid = aClientRequest()
+                    .withTipo(ClientType.PJ)
+                    .withSystem(systemId)
+                    .withDocumento(ClientRequestTestBuilder.CPF_VALIDO)
+                    .build();
 
             mockMvc.perform(post("/clients/")
                             .contentType(MediaType.APPLICATION_JSON)

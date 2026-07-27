@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.client;
 import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
+import br.com.luizbrand.worklog.client.dto.ClientUpdateRequest;
 import br.com.luizbrand.worklog.exceptionhandler.ApiExceptionResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -66,7 +67,7 @@ public interface ClientControllerDocs {
             @ApiResponse(responseCode = "401", description = "Não autenticado")
     })
     ResponseEntity<ClientResponse> updateClient(
-            ClientRequest clientRequest,
+            ClientUpdateRequest clientUpdateRequest,
             @Parameter(description = "ID público do cliente (UUID)", required = true) UUID publicId);
 
     @Operation(summary = "Excluir cliente (soft delete)",
