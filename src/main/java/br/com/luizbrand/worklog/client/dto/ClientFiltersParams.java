@@ -1,5 +1,6 @@
 package br.com.luizbrand.worklog.client.dto;
 
+import br.com.luizbrand.worklog.client.enums.ClientType;
 import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 
 import java.util.List;
@@ -8,6 +9,8 @@ import java.util.UUID;
 public record ClientFiltersParams(
         String name,
         StatusFiltro status,
-        List<UUID> systems
+        List<UUID> systems,
+        String documento,
+        ClientType tipo
 ) {
 }

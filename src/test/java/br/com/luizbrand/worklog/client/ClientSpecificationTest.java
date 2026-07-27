@@ -1,6 +1,7 @@
 package br.com.luizbrand.worklog.client;
 
 import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
+import br.com.luizbrand.worklog.client.enums.ClientType;
 import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import br.com.luizbrand.worklog.system.Systems;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -41,22 +43,39 @@ class ClientSpecificationTest {
     @Mock
     private CriteriaBuilder criteriaBuilder;
     @Mock
-    private Path<String> attributePath;
+    private Path<String> namePath;
+    @Mock
+    private Path<Boolean> enabledPath;
+    @Mock
+    private Path<ClientType> tipoPath;
     @Mock
     private Expression<String> loweredName;
     @Mock
     private Join<Client, Systems> systemsJoin;
     @Mock
+    private Join<Client, ClientBranch> branchesJoin;
+    @Mock
     private Path<Object> systemsPublicIdPath;
+    @Mock
+    private Path<String> documentoPath;
     @Mock
     private Predicate predicate;
 
+    /**
+     * Cada atributo tem seu próprio {@code Path} mockado de propósito: com um mock
+     * único para qualquer nome, um erro no nome do atributo passava despercebido
+     * no teste e só estourava em runtime.
+     */
     @BeforeEach
     @SuppressWarnings({"unchecked", "rawtypes"})
     void wireCriteriaChain() {
-        when(root.get(anyString())).thenReturn((Path) attributePath);
-        when(root.join(anyString())).thenReturn((Join) systemsJoin);
-        when(systemsJoin.get(anyString())).thenReturn((Path) systemsPublicIdPath);
+        when(root.get("name")).thenReturn((Path) namePath);
+        when(root.get("isEnabled")).thenReturn((Path) enabledPath);
+        when(root.get("tipo")).thenReturn((Path) tipoPath);
+        when(root.join("systems")).thenReturn((Join) systemsJoin);
+        when(root.join("branches")).thenReturn((Join) branchesJoin);
+        when(systemsJoin.get("publicId")).thenReturn((Path) systemsPublicIdPath);
+        when(branchesJoin.get("documento")).thenReturn((Path) documentoPath);
         when(criteriaBuilder.lower(any())).thenReturn(loweredName);
         when(criteriaBuilder.like(any(), anyString())).thenReturn(predicate);
         when(criteriaBuilder.equal(any(), any())).thenReturn(predicate);
@@ -68,10 +87,22 @@ class ClientSpecificationTest {
         ClientSpecification.findByFilter(filters).toPredicate(root, query, criteriaBuilder);
     }
 
+    private static ClientFiltersParams filters(String name, StatusFiltro status, List<UUID> systems) {
+        return new ClientFiltersParams(name, status, systems, null, null);
+    }
+
+    private static ClientFiltersParams byDocumento(String documento) {
+        return new ClientFiltersParams(null, null, null, documento, null);
+    }
+
+    private static ClientFiltersParams byTipo(ClientType tipo) {
+        return new ClientFiltersParams(null, null, null, null, tipo);
+    }
+
     @Test
     @DisplayName("Should add no predicates when all filters are null")
     void shouldAddNoPredicatesWhenAllFiltersNull() {
-        apply(new ClientFiltersParams(null, null, null));
+        apply(filters(null, null, null));
 
         verify(criteriaBuilder, never()).like(any(), anyString());
         verify(criteriaBuilder, never()).equal(any(), any());
@@ -81,7 +112,7 @@ class ClientSpecificationTest {
     @Test
     @DisplayName("Should skip the name predicate when name is an empty string")
     void shouldSkipNamePredicateWhenEmpty() {
-        apply(new ClientFiltersParams("", null, null));
+        apply(filters("", null, null));
 
         verify(criteriaBuilder, never()).like(any(), anyString());
     }
@@ -89,32 +120,34 @@ class ClientSpecificationTest {
     @Test
     @DisplayName("Should add a case-insensitive LIKE predicate when name is provided")
     void shouldAddCaseInsensitiveLikeWhenNameProvided() {
-        apply(new ClientFiltersParams("Acme", null, null));
+        apply(filters("Acme", null, null));
 
-        verify(criteriaBuilder).lower(attributePath);
+        verify(criteriaBuilder).lower(namePath);
         verify(criteriaBuilder, times(1)).like(eq(loweredName), eq("%acme%"));
     }
 
     @Test
-    @DisplayName("Should add equal(enabled, true) when status is ATIVO")
+    @DisplayName("Should add equal(isEnabled, true) when status is ATIVO")
     void shouldFilterByEnabledTrueForAtivo() {
-        apply(new ClientFiltersParams(null, StatusFiltro.ATIVO, null));
+        apply(filters(null, StatusFiltro.ATIVO, null));
 
-        verify(criteriaBuilder, times(1)).equal(attributePath, true);
+        verify(root).get("isEnabled");
+        verify(criteriaBuilder, times(1)).equal(enabledPath, true);
     }
 
     @Test
-    @DisplayName("Should add equal(enabled, false) when status is INATIVO")
+    @DisplayName("Should add equal(isEnabled, false) when status is INATIVO")
     void shouldFilterByEnabledFalseForInativo() {
-        apply(new ClientFiltersParams(null, StatusFiltro.INATIVO, null));
+        apply(filters(null, StatusFiltro.INATIVO, null));
 
-        verify(criteriaBuilder, times(1)).equal(attributePath, false);
+        verify(root).get("isEnabled");
+        verify(criteriaBuilder, times(1)).equal(enabledPath, false);
     }
 
     @Test
     @DisplayName("Should add no enabled predicate when status is TODOS")
     void shouldAddNoEnabledPredicateForTodos() {
-        apply(new ClientFiltersParams(null, StatusFiltro.TODOS, null));
+        apply(filters(null, StatusFiltro.TODOS, null));
 
         verify(criteriaBuilder, never()).equal(any(), any());
     }
@@ -124,7 +157,7 @@ class ClientSpecificationTest {
     void shouldJoinSystemsWhenIdsProvided() {
         List<UUID> ids = List.of(UUID.randomUUID(), UUID.randomUUID());
 
-        apply(new ClientFiltersParams(null, null, ids));
+        apply(filters(null, null, ids));
 
         verify(root, times(1)).join("systems");
         verify(systemsJoin).get("publicId");
@@ -134,8 +167,69 @@ class ClientSpecificationTest {
     @Test
     @DisplayName("Should not join systems when the id list is empty")
     void shouldSkipJoinWhenSystemsEmpty() {
-        apply(new ClientFiltersParams(null, null, List.of()));
+        apply(filters(null, null, List.of()));
 
         verify(root, never()).join(anyString());
+    }
+
+    @Test
+    @DisplayName("Should join branches and compare the documento when documento is provided")
+    void shouldJoinBranchesWhenDocumentoProvided() {
+        apply(byDocumento("12345678000195"));
+
+        verify(root, times(1)).join("branches");
+        verify(branchesJoin).get("documento");
+        verify(criteriaBuilder, times(1)).equal(documentoPath, "12345678000195");
+    }
+
+    @Test
+    @DisplayName("Should normalize a masked documento before comparing")
+    void shouldNormalizeMaskedDocumento() {
+        apply(byDocumento("12.345.678/0001-95"));
+
+        verify(criteriaBuilder, times(1)).equal(documentoPath, "12345678000195");
+    }
+
+    @Test
+    @DisplayName("Should skip the documento filter when it is blank")
+    void shouldSkipDocumentoWhenBlank() {
+        apply(byDocumento("   "));
+
+        verify(root, never()).join(anyString());
+        verify(criteriaBuilder, never()).equal(any(), any());
+    }
+
+    @Test
+    @DisplayName("Should add equal(tipo) without any join when tipo is provided")
+    void shouldFilterByTipoWithoutJoin() {
+        apply(byTipo(ClientType.PF));
+
+        verify(root).get("tipo");
+        verify(criteriaBuilder, times(1)).equal(tipoPath, ClientType.PF);
+        verify(root, never()).join(anyString());
+    }
+
+    @Test
+    @DisplayName("Should mark the query as distinct when joining systems")
+    void shouldMarkDistinctWhenJoiningSystems() {
+        apply(filters(null, null, List.of(UUID.randomUUID())));
+
+        verify(query, times(1)).distinct(true);
+    }
+
+    @Test
+    @DisplayName("Should mark the query as distinct when joining branches")
+    void shouldMarkDistinctWhenJoiningBranches() {
+        apply(byDocumento("11144477735"));
+
+        verify(query, times(1)).distinct(true);
+    }
+
+    @Test
+    @DisplayName("Should not touch distinct when no to-many join is added")
+    void shouldNotMarkDistinctWithoutJoin() {
+        apply(filters("Acme", StatusFiltro.ATIVO, null));
+
+        verify(query, never()).distinct(anyBoolean());
     }
 }

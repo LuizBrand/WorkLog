@@ -1,8 +1,11 @@
 package br.com.luizbrand.worklog.client;
 
+import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
 import br.com.luizbrand.worklog.client.enums.ClientType;
 import br.com.luizbrand.worklog.client.enums.ContactType;
 import br.com.luizbrand.worklog.client.enums.RegimeTributario;
+import br.com.luizbrand.worklog.client.enums.StatusFiltro;
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -157,5 +160,47 @@ class ClientPersistenceTest {
         entityManager.clear();
 
         assertThat(clientContactRepository.findAll()).hasSize(1);
+    }
+
+    private Client buildClientWithTwoBranches() {
+        Client client = buildClientWithMatrizAndContacts();
+
+        ClientBranch filial = ClientBranch.builder()
+                .client(client)
+                .documento("98765432000188")
+                .isMatriz(false)
+                .apelido("Filial Norte")
+                .build();
+
+        client.getBranches().add(filial);
+        return client;
+    }
+
+    @Test
+    @DisplayName("Should eagerly load branches on the filtered query (no N+1 on the listing)")
+    void shouldFetchBranchesOnFilteredQuery() {
+        clientRepository.saveAndFlush(buildClientWithTwoBranches());
+        entityManager.clear();
+
+        List<Client> found = clientRepository.findAll(
+                ClientSpecification.findByFilter(new ClientFiltersParams(null, StatusFiltro.ATIVO, null, null, null)));
+
+        assertThat(found).hasSize(1);
+        assertThat(Hibernate.isInitialized(found.get(0).getBranches())).isTrue();
+        assertThat(found.get(0).getBranches()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Should not duplicate the client when filtering by documento through the branch join")
+    void shouldNotDuplicateClientWhenFilteringByDocumento() {
+        clientRepository.saveAndFlush(buildClientWithTwoBranches());
+        entityManager.clear();
+
+        List<Client> found = clientRepository.findAll(
+                ClientSpecification.findByFilter(
+                        new ClientFiltersParams(null, null, null, "98.765.432/0001-88", null)));
+
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).getName()).isEqualTo("Empresa Cascata LTDA");
     }
 }
