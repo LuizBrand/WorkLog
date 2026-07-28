@@ -130,4 +130,31 @@ public interface ClientBranchControllerDocs {
             @Parameter(description = "ID público do cliente (UUID)", required = true) UUID publicId,
             @Parameter(description = "ID público da filial (UUID)", required = true) UUID branchId);
 
+    @Operation(summary = "Reativar filial",
+            description = """
+                    Reativa uma filial inativa (`enabled = true`). Contrapartida de
+                    `POST .../deactivate`.
+
+                    **Idempotente:** reativar uma filial já ativa devolve 204 sem alterar nada.
+
+                    **Não há risco de conflito de documento:** a filial inativa nunca liberou a
+                    unicidade global, então ninguém pôde ter tomado aquele documento no intervalo.
+
+                    Rejeitado com 422: cliente inativo; cliente **pessoa física** que já tenha uma
+                    filial ativa (ele deve ter apenas a matriz).
+
+                    Requer perfil ADMIN.""")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Filial reativada com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão (requer ADMIN)"),
+            @ApiResponse(responseCode = "404", description = "Cliente ou filial não encontrada (inclui filial de outro cliente)",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Cliente inativo, ou pessoa física que já tem filial ativa",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    ResponseEntity<Void> activateBranch(
+            @Parameter(description = "ID público do cliente (UUID)", required = true) UUID publicId,
+            @Parameter(description = "ID público da filial (UUID)", required = true) UUID branchId);
+
 }

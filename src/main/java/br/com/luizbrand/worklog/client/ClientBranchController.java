@@ -62,4 +62,13 @@ public class ClientBranchController implements ClientBranchControllerDocs {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{branchId}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> activateBranch(
+            @PathVariable UUID publicId,
+            @PathVariable UUID branchId) {
+        clientBranchService.activateBranch(publicId, branchId);
+        return ResponseEntity.noContent().build();
+    }
+
 }

@@ -793,4 +793,147 @@ class ClientBranchServiceTest {
             assertThat(branch.getIsEnabled()).isFalse();
         }
     }
+
+    @Nested
+    @DisplayName("activateBranch")
+    class ActivateBranch {
+
+        private UUID branchPublicId;
+        private ClientBranch branch;
+
+        @BeforeEach
+        void setUpBranch() {
+            branch = aBranch(CNPJ_ALFANUMERICO_VALIDO, false);
+            branch.setClient(client);
+            branch.setIsEnabled(false);
+            branchPublicId = branch.getPublicId();
+        }
+
+        @Test
+        @DisplayName("Deve reativar a filial inativa")
+        void shouldActivateBranch() {
+            when(clientService.findActiveClient(clientPublicId)).thenReturn(client);
+            when(clientBranchRepository.findByPublicId(branchPublicId)).thenReturn(Optional.of(branch));
+
+            clientBranchService.activateBranch(clientPublicId, branchPublicId);
+
+            assertThat(branch.getIsEnabled()).isTrue();
+            verify(clientBranchRepository).save(branch);
+        }
+
+        @Test
+        @DisplayName("Não deve mexer em isMatriz ao reativar")
+        void shouldNotTouchIsMatriz() {
+            when(clientService.findActiveClient(clientPublicId)).thenReturn(client);
+            when(clientBranchRepository.findByPublicId(branchPublicId)).thenReturn(Optional.of(branch));
+
+            clientBranchService.activateBranch(clientPublicId, branchPublicId);
+
+            assertThat(branch.getIsMatriz()).isFalse();
+        }
+
+        @Test
+        @DisplayName("Não deve consultar unicidade de documento — a filial inativa nunca soltou o UNIQUE")
+        void shouldNotCheckDocumentoUniqueness() {
+            when(clientService.findActiveClient(clientPublicId)).thenReturn(client);
+            when(clientBranchRepository.findByPublicId(branchPublicId)).thenReturn(Optional.of(branch));
+
+            clientBranchService.activateBranch(clientPublicId, branchPublicId);
+
+            verify(clientBranchRepository, never()).existsByDocumento(any());
+            verify(clientBranchRepository, never()).existsByDocumentoAndPublicIdNot(any(), any());
+        }
+
+        @Test
+        @DisplayName("R1 — cliente inativo deve propagar BusinessException (422)")
+        void shouldPropagateBusinessExceptionWhenClientIsDisabled() {
+            when(clientService.findActiveClient(clientPublicId))
+                    .thenThrow(new BusinessException("Client is not active"));
+
+            assertThatThrownBy(() -> clientBranchService.activateBranch(clientPublicId, branchPublicId))
+                    .isInstanceOf(BusinessException.class);
+
+            verifyNoInteractions(clientBranchRepository);
+        }
+
+        @Test
+        @DisplayName("R2 — filial de outro cliente deve dar 404")
+        void shouldReturnNotFoundWhenBranchBelongsToAnotherClient() {
+            Client outroCliente = new Client();
+            outroCliente.setPublicId(UUID.randomUUID());
+            branch.setClient(outroCliente);
+            when(clientService.findActiveClient(clientPublicId)).thenReturn(client);
+            when(clientBranchRepository.findByPublicId(branchPublicId)).thenReturn(Optional.of(branch));
+
+            assertThatThrownBy(() -> clientBranchService.activateBranch(clientPublicId, branchPublicId))
+                    .isInstanceOf(BranchNotFoundException.class);
+
+            verify(clientBranchRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("R2 — filial inexistente deve dar 404")
+        void shouldReturnNotFoundWhenBranchDoesNotExist() {
+            when(clientService.findActiveClient(clientPublicId)).thenReturn(client);
+            when(clientBranchRepository.findByPublicId(branchPublicId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> clientBranchService.activateBranch(clientPublicId, branchPublicId))
+                    .isInstanceOf(BranchNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("R3 — cliente PF que já tem filial ativa deve recusar a reativação (422, D10)")
+        void shouldRejectActivationWhenPessoaFisicaAlreadyHasActiveBranch() {
+            client.setTipo(ClientType.PF);
+            when(clientService.findActiveClient(clientPublicId)).thenReturn(client);
+            when(clientBranchRepository.findByPublicId(branchPublicId)).thenReturn(Optional.of(branch));
+            when(clientBranchRepository.findByClientPublicIdAndIsEnabled(clientPublicId, true))
+                    .thenReturn(List.of(aBranch(CPF_VALIDO, true)));
+
+            assertThatThrownBy(() -> clientBranchService.activateBranch(clientPublicId, branchPublicId))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("pessoa física");
+
+            assertThat(branch.getIsEnabled()).isFalse();
+            verify(clientBranchRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("R3 — cliente PJ não dispara a regra, mesmo com filiais ativas")
+        void shouldNotApplyPessoaFisicaRuleForPessoaJuridica() {
+            when(clientService.findActiveClient(clientPublicId)).thenReturn(client);
+            when(clientBranchRepository.findByPublicId(branchPublicId)).thenReturn(Optional.of(branch));
+
+            clientBranchService.activateBranch(clientPublicId, branchPublicId);
+
+            verify(clientBranchRepository, never()).findByClientPublicIdAndIsEnabled(any(), any());
+            assertThat(branch.getIsEnabled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("R4 — reativar filial já ativa é idempotente e não grava")
+        void shouldBeIdempotentWhenBranchIsAlreadyActive() {
+            branch.setIsEnabled(true);
+            when(clientService.findActiveClient(clientPublicId)).thenReturn(client);
+            when(clientBranchRepository.findByPublicId(branchPublicId)).thenReturn(Optional.of(branch));
+
+            clientBranchService.activateBranch(clientPublicId, branchPublicId);
+
+            assertThat(branch.getIsEnabled()).isTrue();
+            verify(clientBranchRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("R4 — a idempotência deve vir ANTES da regra de PF, senão reativar filial ativa de PF daria 422")
+        void shouldShortCircuitBeforePessoaFisicaRule() {
+            client.setTipo(ClientType.PF);
+            branch.setIsEnabled(true);
+            when(clientService.findActiveClient(clientPublicId)).thenReturn(client);
+            when(clientBranchRepository.findByPublicId(branchPublicId)).thenReturn(Optional.of(branch));
+
+            clientBranchService.activateBranch(clientPublicId, branchPublicId);
+
+            verify(clientBranchRepository, never()).findByClientPublicIdAndIsEnabled(any(), any());
+        }
+    }
 }

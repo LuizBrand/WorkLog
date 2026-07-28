@@ -207,6 +207,40 @@ public class ClientBranchService {
     }
 
     /**
+     * Reativa uma filial inativa. Contrapartida do
+     * {@link #deactivateBranch(UUID, UUID)}.
+     *
+     * <p><b>Não há checagem de documento aqui de propósito:</b> a filial inativa
+     * nunca soltou o UNIQUE global (consequência aceita na decisão D3), então
+     * ninguém pôde ter tomado aquele documento no intervalo.
+     *
+     * <p>Pelo mesmo motivo não existe o caso "reativar a matriz": a B10 impede
+     * inativá-la, então nenhuma filial inativa é matriz.
+     */
+    @Transactional
+    public void activateBranch(UUID clientPublicId, UUID branchPublicId) {
+        Client client = clientService.findActiveClient(clientPublicId);
+        ClientBranch branch = findBranchOfClient(client, branchPublicId);
+
+        // R4 — idempotente. Precisa vir ANTES da regra de PF, senão reativar uma
+        // filial já ativa de um cliente PF devolveria 422 sem motivo.
+        if (Boolean.TRUE.equals(branch.getIsEnabled())) {
+            return;
+        }
+
+        // R3 — reativar não pode deixar o cadastro num estado que o create
+        // recusaria (B2).
+        if (client.getTipo() == ClientType.PF
+                && !clientBranchRepository.findByClientPublicIdAndIsEnabled(clientPublicId, true).isEmpty()) {
+            throw new BusinessException("Cliente pessoa física deve ter apenas a matriz; "
+                    + "não é possível reativar uma segunda filial");
+        }
+
+        branch.setIsEnabled(true);
+        clientBranchRepository.save(branch);
+    }
+
+    /**
      * B7 — filial de outro cliente responde 404, não 403: o 403 confirmaria que
      * aquele id existe em algum lugar.
      */

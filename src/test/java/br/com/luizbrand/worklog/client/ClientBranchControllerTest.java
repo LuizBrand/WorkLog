@@ -322,4 +322,48 @@ class ClientBranchControllerTest {
                     .andExpect(status().isUnprocessableEntity());
         }
     }
+
+    @Nested
+    @DisplayName("Endpoint: POST /clients/{publicId}/branches/{branchId}/activate")
+    class ActivateBranch {
+
+        private UUID branchPublicId;
+
+        @BeforeEach
+        void setUpBranchId() {
+            branchPublicId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690da4ef9");
+        }
+
+        @Test
+        @DisplayName("Deve retornar 204 ao reativar a filial")
+        void shouldReturn204OnSuccess() throws Exception {
+            mockMvc.perform(post("/clients/{publicId}/branches/{branchId}/activate",
+                            clientPublicId, branchPublicId))
+                    .andExpect(status().isNoContent());
+
+            verify(clientBranchService).activateBranch(clientPublicId, branchPublicId);
+        }
+
+        @Test
+        @DisplayName("Deve retornar 404 quando a filial não existe ou é de outro cliente")
+        void shouldReturn404WhenBranchMissing() throws Exception {
+            doThrow(new BranchNotFoundException("Branch with public ID: " + branchPublicId + " not found"))
+                    .when(clientBranchService).activateBranch(clientPublicId, branchPublicId);
+
+            mockMvc.perform(post("/clients/{publicId}/branches/{branchId}/activate",
+                            clientPublicId, branchPublicId))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("Deve retornar 422 quando o cliente PF já tem filial ativa")
+        void shouldReturn422OnBusinessRuleViolation() throws Exception {
+            doThrow(new BusinessException("Cliente pessoa física deve ter apenas a matriz"))
+                    .when(clientBranchService).activateBranch(clientPublicId, branchPublicId);
+
+            mockMvc.perform(post("/clients/{publicId}/branches/{branchId}/activate",
+                            clientPublicId, branchPublicId))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+    }
 }
