@@ -52,7 +52,9 @@ public abstract class ClientMapper {
             @Mapping(target = "client", ignore = true), // Preenchido em wireBackReferences
             @Mapping(target = "isMatriz", source = "isMatriz", defaultValue = "false")
     })
-    protected abstract ClientBranch toClientBranch(BranchRequest branchRequest);
+    // public porque o ClientBranchService também consome: passou a fazer parte da
+    // superfície do mapper, não é mais detalhe interno de toClient.
+    public abstract ClientBranch toClientBranch(BranchRequest branchRequest);
 
     @Mappings({
             @Mapping(target = "id", ignore = true),
@@ -68,7 +70,7 @@ public abstract class ClientMapper {
     protected abstract Address toAddress(AddressRequest addressRequest);
 
     @Mapping(source = "isEnabled", target = "enabled")
-    protected abstract BranchResponse toBranchResponse(ClientBranch branch);
+    public abstract BranchResponse toBranchResponse(ClientBranch branch);
 
     protected abstract ContactResponse toContactResponse(ClientContact contact);
 
