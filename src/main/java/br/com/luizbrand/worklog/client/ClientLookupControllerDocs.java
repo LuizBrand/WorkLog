@@ -24,6 +24,20 @@ public interface ClientLookupControllerDocs {
                     inválido devolve 400 sem gastar requisição no provedor, que limita a
                     5 consultas por minuto por endereço IP.
 
+                    A inscrição estadual devolvida é a da **UF do endereço** do
+                    estabelecimento, preferindo IE Normal e habilitada — um mesmo CNPJ pode
+                    ter várias inscrições, as demais sendo substituição tributária em
+                    estados para onde ele vende. Sem inscrição na UF, volta em branco.
+
+                    O regime tributário só é preenchido quando o provedor afirma: MEI ou
+                    Simples Nacional. Lucro Presumido e Lucro Real não existem no contrato e
+                    ficam a cargo do usuário.
+
+                    `situacaoCadastral` e `situacaoAtiva` são o aviso da tela, não campos do
+                    cadastro: CNPJ suspenso, inapto ou baixado vem **preenchido do mesmo
+                    jeito**, com `situacaoAtiva: false`, e quem decide se cadastra é o
+                    atendente.
+
                     A inscrição municipal não existe no contrato do provedor e volta sempre
                     em branco. Nenhum contato vem marcado como principal: quem escolhe é o
                     usuário.

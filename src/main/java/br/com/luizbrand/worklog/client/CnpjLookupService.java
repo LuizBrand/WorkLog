@@ -6,6 +6,7 @@ import br.com.luizbrand.worklog.client.dto.CnpjLookupResponse;
 import br.com.luizbrand.worklog.client.dto.ContactRequest;
 import br.com.luizbrand.worklog.client.enums.ClientType;
 import br.com.luizbrand.worklog.client.enums.ContactType;
+import br.com.luizbrand.worklog.client.enums.RegimeTributario;
 import br.com.luizbrand.worklog.client.integration.CnpjaClient;
 import br.com.luizbrand.worklog.client.integration.dto.CnpjaOfficeResponse;
 import br.com.luizbrand.worklog.client.validation.DocumentoChecksum;
@@ -13,6 +14,7 @@ import br.com.luizbrand.worklog.exception.BadRequest.InvalidDocumentoException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -56,8 +58,7 @@ public class CnpjLookupService {
                 office.taxId(),
                 matriz,
                 office.alias(),
-                // Inscrição estadual entra na fatia 6B (regra da UF do endereço).
-                null,
+                inscricaoEstadual(office),
                 // Inscrição municipal não existe em nenhum ponto do contrato da
                 // CNPJá: segue preenchimento manual.
                 null,
@@ -72,7 +73,70 @@ public class CnpjLookupService {
                 // matriz é a própria empresa, então só nela o alias vira
                 // nomeFantasia — consultando uma filial, o usuário preenche.
                 matriz ? office.alias() : null,
+                regimeTributario(office.company()),
+                office.status() == null ? null : office.status().text(),
+                office.status() != null && Integer.valueOf(CnpjaOfficeResponse.Status.ATIVA).equals(office.status().id()),
                 List.of(branch));
+    }
+
+    /**
+     * Inscrição estadual do estabelecimento, que é a da <b>UF do endereço</b>.
+     *
+     * <p>A lista costuma trazer mais de uma: a IE é por estabelecimento, e quem
+     * vende para outros estados se inscreve neles como substituto tributário.
+     * A Ambev de Manaus, por exemplo, tem quatro — pegar a primeira traria a de
+     * Roraima. Dentro da UF, prefere IE Normal e habilitada; sem nenhuma na UF,
+     * deixa em branco para o usuário preencher.
+     */
+    private String inscricaoEstadual(CnpjaOfficeResponse office) {
+        if (office.registrations() == null || office.address() == null
+                || office.address().state() == null) {
+            return null;
+        }
+
+        String uf = office.address().state();
+
+        return office.registrations().stream()
+                .filter(registration -> uf.equals(registration.state()))
+                .min(Comparator
+                        .comparing((CnpjaOfficeResponse.Registration registration) -> !isIeNormal(registration))
+                        .thenComparing(registration -> !Boolean.TRUE.equals(registration.enabled())))
+                .map(CnpjaOfficeResponse.Registration::number)
+                .orElse(null);
+    }
+
+    private boolean isIeNormal(CnpjaOfficeResponse.Registration registration) {
+        return registration.type() != null
+                && Integer.valueOf(CnpjaOfficeResponse.Registration.Type.IE_NORMAL)
+                .equals(registration.type().id());
+    }
+
+    /**
+     * Só o que a API afirma. Lucro Presumido e Lucro Real não aparecem em ponto
+     * nenhum do contrato, então ficam em branco em vez de serem adivinhados.
+     */
+    private RegimeTributario regimeTributario(CnpjaOfficeResponse.Company company) {
+        if (company == null) {
+            return null;
+        }
+
+        // MEI é checado ANTES do Simples de propósito: todo MEI é optante do
+        // Simples, então a CNPJá devolve simples.optant = true para os dois. Na
+        // ordem inversa, todo MEI seria cadastrado como SIMPLES_NACIONAL sem
+        // erro nenhum aparecer.
+        if (isOptant(company.simei())) {
+            return RegimeTributario.MEI;
+        }
+
+        if (isOptant(company.simples())) {
+            return RegimeTributario.SIMPLES_NACIONAL;
+        }
+
+        return null;
+    }
+
+    private boolean isOptant(CnpjaOfficeResponse.SimplesSimei bloco) {
+        return bloco != null && Boolean.TRUE.equals(bloco.optant());
     }
 
     private AddressRequest toAddress(CnpjaOfficeResponse.Address address) {

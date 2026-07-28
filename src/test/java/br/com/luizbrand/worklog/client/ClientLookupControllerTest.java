@@ -8,6 +8,7 @@ import br.com.luizbrand.worklog.client.dto.CnpjLookupResponse;
 import br.com.luizbrand.worklog.client.dto.ContactRequest;
 import br.com.luizbrand.worklog.client.enums.ClientType;
 import br.com.luizbrand.worklog.client.enums.ContactType;
+import br.com.luizbrand.worklog.client.enums.RegimeTributario;
 import br.com.luizbrand.worklog.exception.BadRequest.InvalidDocumentoException;
 import br.com.luizbrand.worklog.exception.External.ExternalRateLimitException;
 import br.com.luizbrand.worklog.exception.External.ExternalServiceUnavailableException;
@@ -58,7 +59,10 @@ class ClientLookupControllerTest {
                 ClientType.PJ,
                 "AMBEV S.A.",
                 null,
-                List.of(new BranchRequest(CNPJ, false, "AMBEV FILIAL MANAUS", null, null,
+                RegimeTributario.SIMPLES_NACIONAL,
+                "Ativa",
+                true,
+                List.of(new BranchRequest(CNPJ, false, "AMBEV FILIAL MANAUS", "054591406", null,
                         new AddressRequest("69075000", "Avenida Buriti", "4000", "Galpao 2",
                                 "Distrito Industrial", "Manaus", "AM"),
                         List.of(new ContactRequest(ContactType.EMAIL, "contabilidade@ambev.com.br",
@@ -80,7 +84,11 @@ class ClientLookupControllerTest {
                 .andExpect(jsonPath("$.branches[0].isMatriz").value(false))
                 .andExpect(jsonPath("$.branches[0].address.cidade").value("Manaus"))
                 .andExpect(jsonPath("$.branches[0].address.uf").value("AM"))
-                .andExpect(jsonPath("$.branches[0].contatos[0].tipo").value("EMAIL"));
+                .andExpect(jsonPath("$.branches[0].contatos[0].tipo").value("EMAIL"))
+                .andExpect(jsonPath("$.branches[0].inscricaoEstadual").value("054591406"))
+                .andExpect(jsonPath("$.regimeTributario").value("SIMPLES_NACIONAL"))
+                .andExpect(jsonPath("$.situacaoCadastral").value("Ativa"))
+                .andExpect(jsonPath("$.situacaoAtiva").value(true));
 
         verify(cnpjLookupService).lookup(CNPJ);
     }

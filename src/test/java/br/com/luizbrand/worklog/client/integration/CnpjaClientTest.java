@@ -80,6 +80,31 @@ class CnpjaClientTest {
     }
 
     @Test
+    @DisplayName("200 -> desserializa situação cadastral, Simples/MEI e inscrições estaduais")
+    void shouldDeserializeEnrichmentFields() throws Exception {
+        mockServer.expect(requestTo(URL))
+                .andRespond(withSuccess(fixture(), MediaType.APPLICATION_JSON));
+
+        CnpjaOfficeResponse office = cnpjaClient.findOffice(CNPJ);
+
+        assertThat(office.status().id()).isEqualTo(2);
+        assertThat(office.status().text()).isEqualTo("Ativa");
+        assertThat(office.company().simples().optant()).isFalse();
+        assertThat(office.company().simei().optant()).isFalse();
+
+        // As quatro inscrições do mesmo estabelecimento: só a de AM é a dele
+        // como contribuinte, as outras são substituição tributária.
+        assertThat(office.registrations()).hasSize(4);
+        CnpjaOfficeResponse.Registration amazonas = office.registrations().stream()
+                .filter(r -> "AM".equals(r.state()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(amazonas.number()).isEqualTo("054591406");
+        assertThat(amazonas.enabled()).isTrue();
+        assertThat(amazonas.type().id()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("Campos que a CNPJá manda e nós não modelamos não podem quebrar a leitura")
     void shouldIgnoreUnknownFields() throws Exception {
         // A fixture traz members, CNAEs, capital social, registrations e status —

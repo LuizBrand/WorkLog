@@ -24,10 +24,51 @@ public record CnpjaOfficeResponse(
         Company company,
         Address address,
         List<Phone> phones,
-        List<Email> emails) {
+        List<Email> emails,
+        Status status,
+        List<Registration> registrations) {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Company(String name) {
+    public record Company(String name, SimplesSimei simples, SimplesSimei simei) {
+    }
+
+    /**
+     * Opção pelo Simples Nacional ou enquadramento no MEI. Só o {@code optant}
+     * interessa: o histórico de períodos é da API comercial.
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record SimplesSimei(Boolean optant) {
+    }
+
+    /**
+     * Situação cadastral. Os códigos do contrato são {@code 1} Nula,
+     * {@code 2} Ativa, {@code 3} Suspensa, {@code 4} Inapta e {@code 8} Baixada.
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Status(Integer id, String text) {
+
+        public static final int ATIVA = 2;
+    }
+
+    /**
+     * Inscrição estadual. Um mesmo estabelecimento pode ter várias — a IE é por
+     * estabelecimento, e quem vende para outros estados se inscreve neles como
+     * substituto tributário.
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Registration(String number, String state, Boolean enabled, Type type) {
+
+        /**
+         * Códigos do contrato: {@code 1} IE Normal, {@code 2} Substituto
+         * Tributário, {@code 3} Não Contribuinte, {@code 4} Contribuinte da UF
+         * com endereço em outra, {@code 5} Produtor Rural, {@code 9} Não
+         * informada.
+         */
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record Type(Integer id, String text) {
+
+            public static final int IE_NORMAL = 1;
+        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
