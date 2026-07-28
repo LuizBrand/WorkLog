@@ -177,6 +177,33 @@ class ClientMapperTest {
             assertThat(response.systems()).hasSize(1);
             assertThat(response.systems().get(0).publicId()).isEqualTo(systemPublicId);
             assertThat(response.systems().get(0).name()).isEqualTo("System A");
+            assertThat(response.systems().get(0).enabled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should map the enabled flag of the nested systems, not default it to false")
+        void shouldMapNestedSystemEnabledFlag() {
+            Systems enabledSystem = new Systems();
+            enabledSystem.setPublicId(UUID.randomUUID());
+            enabledSystem.setName("System ON");
+            enabledSystem.setIsEnabled(true);
+
+            Systems disabledSystem = new Systems();
+            disabledSystem.setPublicId(UUID.randomUUID());
+            disabledSystem.setName("System OFF");
+            disabledSystem.setIsEnabled(false);
+
+            Client client = new Client();
+            client.setPublicId(UUID.randomUUID());
+            client.setName("Client A");
+            client.setIsEnabled(true);
+            client.setSystems(List.of(enabledSystem, disabledSystem));
+
+            ClientResponse response = clientMapper.toClientResponse(client);
+
+            assertThat(response.systems()).hasSize(2);
+            assertThat(response.systems().get(0).enabled()).isTrue();
+            assertThat(response.systems().get(1).enabled()).isFalse();
         }
 
         @Test

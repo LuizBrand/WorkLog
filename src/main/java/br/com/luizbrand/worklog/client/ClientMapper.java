@@ -12,6 +12,7 @@ import br.com.luizbrand.worklog.client.dto.ClientUpdateRequest;
 import br.com.luizbrand.worklog.client.dto.ContactRequest;
 import br.com.luizbrand.worklog.client.dto.ContactResponse;
 import br.com.luizbrand.worklog.system.Systems;
+import br.com.luizbrand.worklog.system.dto.SystemResponse;
 import org.mapstruct.*;
 
 import java.time.LocalDateTime;
@@ -35,6 +36,18 @@ public abstract class ClientMapper {
 
     @Mapping(source = "isEnabled", target = "enabled")
     public abstract ClientResponse toClientResponse(Client client);
+
+    /**
+     * Sem este método o MapStruct gerava a conversão implícita de
+     * {@code Systems} para {@code SystemResponse} e não conseguia casar
+     * {@code isEnabled} com {@code enabled} — o resultado era {@code enabled}
+     * fixo em {@code false} dentro de {@code ClientResponse.systems}, mesmo com
+     * o sistema ativo. Espelha o {@code SystemMapper.toSystemResponse}; não dá
+     * para delegar via {@code uses = SystemMapper.class} porque o mapper é
+     * exercitado com {@code Mappers.getMapper(...)}, que não injeta dependência.
+     */
+    @Mapping(source = "isEnabled", target = "enabled")
+    protected abstract SystemResponse toSystemResponse(Systems system);
 
     @Mapping(source = "isEnabled", target = "enabled")
     public abstract ClientSummary toSummary(Client client);
