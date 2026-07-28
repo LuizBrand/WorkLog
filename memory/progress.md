@@ -7,6 +7,7 @@ changed without an update here.
 
 ## In Progress
 - **Expansão do cadastro de clientes (branch `feat/client-registration-expasion`).** Plano em `PLANO-expansao-cadastro-clientes.md`, detalhamento da fase atual em `FASE-4-clientes.md`. Fase 1 (schema) commitada (`4d5059c`), Fase 2 (DTOs/validação/mapper) commitada (`31e08ef`), Fase 3 (regras de negócio + filtros) commitada (`cea3ea2`). **Decisões D1–D8 travadas em 2026-07-27** (tabela na seção 2 do `FASE-4-clientes.md`). **4A (`91728ed`), 4B (`783b9a3`) e 4B2 (`c031de9`) commitadas. 4C implementada, suíte em 388, aguardando aprovação para commitar.** Depois disso a Fase 4 fecha em código — **restam duas verificações que só o owner pode fazer**: a query de matrizes duplicadas em **produção** antes do deploy da `V13`, e o fluxo manual em dev da seção 9 do `FASE-4-clientes.md`.
+- **Expansão do cadastro de clientes — FASE 5 (última do plano macro) ENCERRADA em 2026-07-27.** A parte obrigatória era confirmar que o `ClientSummary` embutido em `TicketResponse`/`TicketSummary` continua compilando e fazendo sentido: verificado **ao vivo** na verificação manual (ticket criado para o cliente novo → 201 com `ClientSummary` correto; `GET /tickets` lista com o resumo intacto). `tickets` nunca foi tocado, conforme a decisão 4 do plano macro. **A parte opcional — enriquecer o `ClientSummary` com o documento da matriz — NÃO foi feita: é decisão de produto, não dívida.**
 - **Backend gaps plan complete.** All 7 phases shipped (commits `840813a` → `44cbb34`). `backend-gaps.md` is fully cleared.
 - **Post-audit hardening:**
   - Fix A — OpenAPI cookie scheme: shipped as `4269a3c`.
@@ -334,15 +335,14 @@ changed without an update here.
 - [x] `./mvnw test` green — 175/175
 - [x] Commit `feat(users): add GET /users/me endpoint` → `0b65888`
 
-### MVP v1 — Phase 5 (in flight, per `.claude/mvp-v1-phases-4-5.md`)
-- [ ] Phase 5 — `DELETE /tickets/{publicId}` (soft delete, ADMIN-only) + `StatusFiltro visibility` filter on `GET /tickets` (non-ADMIN forced to `ATIVO`; ADMIN default `ATIVO` when `null`)
+### MVP v1 — Phase 5 (shipped — commit `63d5225`)
+- [x] `DELETE /tickets/{publicId}` (soft delete, ADMIN-only) + `StatusFiltro visibility` filter on `GET /tickets` (non-ADMIN forced to `ATIVO`; ADMIN default `ATIVO` when `null`). Verificado em 2026-07-27: `@DeleteMapping("/{publicId}")` no `TicketController` e `visibility` no `TicketFiltersParams`.
 
 ### Discarded
 - Phase 6 — `GET /tickets` default sort `updatedAt DESC` — dropped per user direction (2026-04-25)
 
-### Test coverage track
-- [ ] Confirm with the user whether `.claude/test-plan.md` (referenced in user-level memory) still applies, or if it was folded into `.claude/mvp-v1-plan.md`
-- [ ] If still active, identify the next module to cover — the global memory says "Phase 5 = system module", but `system` already has mapper/service/controller tests; clarify before planning more
+### Test coverage track — ENCERRADA
+- [x] Resolvido em 2026-07-27: o plano de cobertura de testes foi **concluído** (8 fases, última em `07e410b`, 2026-04-21). O `.claude/test-plan.md` e o `.claude/mvp-v1-plan.md` não existem mais no repositório — eram planos locais, apagados depois de executados. A linha de índice na memória global dizia "fases 1–4 feitas, próxima é a 5", contradizendo o próprio arquivo de memória, que já registrava as 8 como completas; índice corrigido.
 
 ## Blocked
-- [ ] Test-coverage plan at `.claude/test-plan.md` — file not found in this repository (only `.claude/mvp-v1-plan.md` is present). Awaiting clarification.
+- (nada bloqueado)
