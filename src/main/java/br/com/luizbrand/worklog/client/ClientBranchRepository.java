@@ -23,4 +23,13 @@ public interface ClientBranchRepository extends JpaRepository<ClientBranch, Long
 
     List<ClientBranch> findByClientPublicIdAndIsEnabled(UUID clientPublicId, Boolean isEnabled);
 
+    List<ClientBranch> findByClientPublicIdAndIsMatriz(UUID clientPublicId, Boolean isMatriz);
+
+    /**
+     * Unicidade do documento excluindo a própria filial. Sem o
+     * {@code AndPublicIdNot}, salvar uma filial <b>sem mudar</b> o documento
+     * devolveria 409 contra ela mesma.
+     */
+    boolean existsByDocumentoAndPublicIdNot(String documento, UUID publicId);
+
 }

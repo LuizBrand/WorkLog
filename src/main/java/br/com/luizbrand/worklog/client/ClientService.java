@@ -6,6 +6,7 @@ import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
 import br.com.luizbrand.worklog.client.dto.ClientUpdateRequest;
 import br.com.luizbrand.worklog.client.enums.ClientType;
+import br.com.luizbrand.worklog.client.validation.ContactRules;
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.system.Systems;
 import br.com.luizbrand.worklog.system.SystemService;
@@ -118,6 +119,11 @@ public class ClientService {
             if (!documentos.add(branch.documento())) {
                 throw new BusinessException("Documento repetido no mesmo cadastro: " + branch.documento());
             }
+            // A regra vale por filial, então dois principais em filiais diferentes
+            // são aceitos.
+            if (ContactRules.hasMultiplePrincipais(branch.contatos())) {
+                throw new BusinessException(ContactRules.MENSAGEM_MULTIPLOS_PRINCIPAIS);
+            }
         }
 
         for (String documento : documentos) {
@@ -155,6 +161,15 @@ public class ClientService {
         }
 
         Client client = clientOpt.get();
+
+        // Débito 7.4 — a coerência só pode ser checada aqui, contra as filiais
+        // persistidas: virar PF com várias filiais quebraria a regra do create.
+        if (clientUpdateRequest.tipo() == ClientType.PF
+                && clientBranchRepository.findByClientPublicIdAndIsEnabled(publicId, true).size() > 1) {
+            throw new BusinessException("Cliente pessoa física deve ter apenas a matriz; "
+                    + "inative as demais filiais antes de trocar o tipo");
+        }
+
         List<Systems> associatedSystems = null;
         List<UUID> systemsPublicIds = clientUpdateRequest.systemsPublicIds();
 

@@ -2,11 +2,14 @@ package br.com.luizbrand.worklog.client;
 
 import br.com.luizbrand.worklog.client.dto.BranchRequest;
 import br.com.luizbrand.worklog.client.dto.BranchResponse;
+import br.com.luizbrand.worklog.client.dto.BranchUpdateRequest;
 import br.com.luizbrand.worklog.client.enums.ClientType;
 import br.com.luizbrand.worklog.client.enums.StatusFiltro;
+import br.com.luizbrand.worklog.client.validation.ContactRules;
 import br.com.luizbrand.worklog.client.validation.DocumentoChecksum;
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.Conflict.DocumentoAlreadyExistsException;
+import br.com.luizbrand.worklog.exception.NotFound.BranchNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -99,10 +102,125 @@ public class ClientBranchService {
             throw new BusinessException(DocumentoChecksum.mensagemPara(client.getTipo()));
         }
 
+        if (ContactRules.hasMultiplePrincipais(branchRequest.contatos())) {
+            throw new BusinessException(ContactRules.MENSAGEM_MULTIPLOS_PRINCIPAIS);
+        }
+
         // B6 — a unicidade do documento é global, não por cliente.
         if (clientBranchRepository.existsByDocumento(documento)) {
             throw new DocumentoAlreadyExistsException("Documento: " + documento + " already exists");
         }
+    }
+
+    @Transactional
+    public BranchResponse updateBranch(UUID clientPublicId, UUID branchPublicId,
+                                       BranchUpdateRequest branchUpdateRequest) {
+        Client client = clientService.findActiveClient(clientPublicId);
+        ClientBranch branch = findBranchOfClient(client, branchPublicId);
+
+        applyUpdateRules(client, branch, branchUpdateRequest);
+
+        clientMapper.updateBranch(branchUpdateRequest, branch);
+
+        // O mapper substitui a lista inteira quando ela vem preenchida (D7), mas
+        // não conhece a referência de volta — sem ela o insert falha na FK.
+        if (branch.getContatos() != null) {
+            branch.getContatos().forEach(contato -> contato.setBranch(branch));
+        }
+
+        applyMatrizTransfer(clientPublicId, branch, branchUpdateRequest);
+
+        return clientMapper.toBranchResponse(clientBranchRepository.save(branch));
+    }
+
+    /**
+     * Regras B8, B9, B11 e 7.5. B13 sai de graça: o documento só é validado
+     * quando vem no corpo, então editar uma filial de legado (documento nulo) sem
+     * mexer nele é permitido.
+     */
+    private void applyUpdateRules(Client client, ClientBranch branch, BranchUpdateRequest request) {
+        String documento = request.documento();
+
+        if (documento != null) {
+            // B9 — o tipo vem do cliente persistido, igual ao create.
+            if (!DocumentoChecksum.isValid(client.getTipo(), documento)) {
+                throw new BusinessException(DocumentoChecksum.mensagemPara(client.getTipo()));
+            }
+            // B8 — excluindo a própria filial, senão reenviar o mesmo documento
+            // devolveria 409 contra ela mesma.
+            if (clientBranchRepository.existsByDocumentoAndPublicIdNot(documento, branch.getPublicId())) {
+                throw new DocumentoAlreadyExistsException("Documento: " + documento + " already exists");
+            }
+        }
+
+        // B11 — rebaixar a matriz sem promover outra deixaria o cliente sem matriz.
+        if (Boolean.FALSE.equals(request.isMatriz()) && Boolean.TRUE.equals(branch.getIsMatriz())) {
+            throw new BusinessException("A matriz não pode ser rebaixada; promova outra filial a matriz");
+        }
+
+        if (Boolean.TRUE.equals(request.isMatriz()) && !Boolean.TRUE.equals(branch.getIsEnabled())) {
+            throw new BusinessException("Uma filial inativa não pode ser promovida a matriz");
+        }
+
+        if (ContactRules.hasMultiplePrincipais(request.contatos())) {
+            throw new BusinessException(ContactRules.MENSAGEM_MULTIPLOS_PRINCIPAIS);
+        }
+    }
+
+    /**
+     * B12 — promover rebaixa a matriz anterior. O {@code saveAndFlush} força o
+     * UPDATE do rebaixamento a sair <b>antes</b> da promoção: com o índice único
+     * parcial da V13, as duas linhas marcadas como matriz no mesmo instante
+     * violariam a constraint.
+     */
+    private void applyMatrizTransfer(UUID clientPublicId, ClientBranch branch, BranchUpdateRequest request) {
+        if (!Boolean.TRUE.equals(request.isMatriz()) || Boolean.TRUE.equals(branch.getIsMatriz())) {
+            return;
+        }
+
+        clientBranchRepository.findByClientPublicIdAndIsMatriz(clientPublicId, true)
+                .forEach(matrizAtual -> {
+                    matrizAtual.setIsMatriz(false);
+                    clientBranchRepository.saveAndFlush(matrizAtual);
+                });
+
+        branch.setIsMatriz(true);
+    }
+
+    /**
+     * Inativa a filial (soft delete). O documento continua ocupando o UNIQUE
+     * global — recadastrá-lo em outro cliente devolve 409 enquanto esta filial
+     * existir. Consequência aceita conscientemente na decisão D3.
+     */
+    @Transactional
+    public void deactivateBranch(UUID clientPublicId, UUID branchPublicId) {
+        Client client = clientService.findActiveClient(clientPublicId);
+        ClientBranch branch = findBranchOfClient(client, branchPublicId);
+
+        // B10 — sem matriz o cadastro fica inconsistente com a regra do create.
+        if (Boolean.TRUE.equals(branch.getIsMatriz())) {
+            throw new BusinessException("A matriz não pode ser inativada; promova outra filial a matriz antes");
+        }
+
+        branch.setIsEnabled(false);
+        clientBranchRepository.save(branch);
+    }
+
+    /**
+     * B7 — filial de outro cliente responde 404, não 403: o 403 confirmaria que
+     * aquele id existe em algum lugar.
+     */
+    private ClientBranch findBranchOfClient(Client client, UUID branchPublicId) {
+        ClientBranch branch = clientBranchRepository.findByPublicId(branchPublicId)
+                .orElseThrow(() -> new BranchNotFoundException(
+                        "Branch with public ID: " + branchPublicId + " not found"));
+
+        if (branch.getClient() == null
+                || !client.getPublicId().equals(branch.getClient().getPublicId())) {
+            throw new BranchNotFoundException("Branch with public ID: " + branchPublicId + " not found");
+        }
+
+        return branch;
     }
 
 }

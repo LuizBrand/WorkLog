@@ -2,11 +2,14 @@ package br.com.luizbrand.worklog.client;
 
 import br.com.luizbrand.worklog.client.dto.BranchRequest;
 import br.com.luizbrand.worklog.client.dto.BranchResponse;
+import br.com.luizbrand.worklog.client.dto.BranchUpdateRequest;
 import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,6 +43,23 @@ public class ClientBranchController implements ClientBranchControllerDocs {
             @RequestBody @Valid BranchRequest branchRequest) {
         BranchResponse branchResponse = clientBranchService.createBranch(publicId, branchRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(branchResponse);
+    }
+
+    @PatchMapping("/{branchId}")
+    public ResponseEntity<BranchResponse> updateBranch(
+            @PathVariable UUID publicId,
+            @PathVariable UUID branchId,
+            @RequestBody @Valid BranchUpdateRequest branchUpdateRequest) {
+        return ResponseEntity.ok(clientBranchService.updateBranch(publicId, branchId, branchUpdateRequest));
+    }
+
+    @PostMapping("/{branchId}/deactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deactivateBranch(
+            @PathVariable UUID publicId,
+            @PathVariable UUID branchId) {
+        clientBranchService.deactivateBranch(publicId, branchId);
+        return ResponseEntity.noContent().build();
     }
 
 }

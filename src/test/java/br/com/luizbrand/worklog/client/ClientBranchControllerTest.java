@@ -4,9 +4,11 @@ import br.com.luizbrand.worklog.auth.AuthFilter;
 import br.com.luizbrand.worklog.auth.CustomUserDetailsService;
 import br.com.luizbrand.worklog.client.dto.BranchRequest;
 import br.com.luizbrand.worklog.client.dto.BranchResponse;
+import br.com.luizbrand.worklog.client.dto.BranchUpdateRequest;
 import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.Conflict.DocumentoAlreadyExistsException;
+import br.com.luizbrand.worklog.exception.NotFound.BranchNotFoundException;
 import br.com.luizbrand.worklog.exception.NotFound.ClientNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,9 +29,11 @@ import java.util.UUID;
 import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.CNPJ_ALFANUMERICO_VALIDO;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -195,6 +199,127 @@ class ClientBranchControllerTest {
 
             verify(clientBranchService).createBranch(clientPublicId,
                     new BranchRequest(CNPJ_ALFANUMERICO_VALIDO, false, null, null, null, null, List.of()));
+        }
+    }
+
+    @Nested
+    @DisplayName("Endpoint: PATCH /clients/{publicId}/branches/{branchId}")
+    class UpdateBranch {
+
+        private UUID branchPublicId;
+
+        @BeforeEach
+        void setUpBranchId() {
+            branchPublicId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690da4ef9");
+        }
+
+        private BranchUpdateRequest onlyApelido() {
+            return new BranchUpdateRequest(null, null, "Filial Campinas", null, null, null, null);
+        }
+
+        @Test
+        @DisplayName("Deve retornar 200 e a filial atualizada")
+        void shouldReturn200OnSuccess() throws Exception {
+            when(clientBranchService.updateBranch(eq(clientPublicId), eq(branchPublicId), any(BranchUpdateRequest.class)))
+                    .thenReturn(branchResponse);
+
+            mockMvc.perform(patch("/clients/{publicId}/branches/{branchId}", clientPublicId, branchPublicId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(onlyApelido())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.apelido").value("Filial SP"));
+        }
+
+        @Test
+        @DisplayName("Deve retornar 404 quando a filial não existe ou é de outro cliente")
+        void shouldReturn404WhenBranchMissing() throws Exception {
+            when(clientBranchService.updateBranch(eq(clientPublicId), eq(branchPublicId), any(BranchUpdateRequest.class)))
+                    .thenThrow(new BranchNotFoundException("Branch with public ID: " + branchPublicId + " not found"));
+
+            mockMvc.perform(patch("/clients/{publicId}/branches/{branchId}", clientPublicId, branchPublicId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(onlyApelido())))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("Deve retornar 409 quando o documento pertence a outra filial")
+        void shouldReturn409OnDuplicatedDocumento() throws Exception {
+            when(clientBranchService.updateBranch(eq(clientPublicId), eq(branchPublicId), any(BranchUpdateRequest.class)))
+                    .thenThrow(new DocumentoAlreadyExistsException("Documento: " + CNPJ_ALFANUMERICO_VALIDO + " already exists"));
+
+            mockMvc.perform(patch("/clients/{publicId}/branches/{branchId}", clientPublicId, branchPublicId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(onlyApelido())))
+                    .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("Deve retornar 422 quando o serviço rejeita a regra de negócio")
+        void shouldReturn422OnBusinessRuleViolation() throws Exception {
+            when(clientBranchService.updateBranch(eq(clientPublicId), eq(branchPublicId), any(BranchUpdateRequest.class)))
+                    .thenThrow(new BusinessException("A matriz não pode ser rebaixada"));
+
+            mockMvc.perform(patch("/clients/{publicId}/branches/{branchId}", clientPublicId, branchPublicId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(onlyApelido())))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+
+        @Test
+        @DisplayName("Deve retornar 400 quando o apelido excede o tamanho máximo")
+        void shouldReturn400WhenApelidoTooLong() throws Exception {
+            BranchUpdateRequest invalid = new BranchUpdateRequest(null, null, "x".repeat(101),
+                    null, null, null, null);
+
+            mockMvc.perform(patch("/clients/{publicId}/branches/{branchId}", clientPublicId, branchPublicId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalid)))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    @DisplayName("Endpoint: POST /clients/{publicId}/branches/{branchId}/deactivate")
+    class DeactivateBranch {
+
+        private UUID branchPublicId;
+
+        @BeforeEach
+        void setUpBranchId() {
+            branchPublicId = UUID.fromString("0abcfc81-9411-40a6-8cbc-d3f690da4ef9");
+        }
+
+        @Test
+        @DisplayName("Deve retornar 204 ao inativar a filial")
+        void shouldReturn204OnSuccess() throws Exception {
+            mockMvc.perform(post("/clients/{publicId}/branches/{branchId}/deactivate",
+                            clientPublicId, branchPublicId))
+                    .andExpect(status().isNoContent());
+
+            verify(clientBranchService).deactivateBranch(clientPublicId, branchPublicId);
+        }
+
+        @Test
+        @DisplayName("Deve retornar 404 quando a filial não existe")
+        void shouldReturn404WhenBranchMissing() throws Exception {
+            doThrow(new BranchNotFoundException("Branch with public ID: " + branchPublicId + " not found"))
+                    .when(clientBranchService).deactivateBranch(clientPublicId, branchPublicId);
+
+            mockMvc.perform(post("/clients/{publicId}/branches/{branchId}/deactivate",
+                            clientPublicId, branchPublicId))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("Deve retornar 422 ao tentar inativar a matriz")
+        void shouldReturn422WhenDeactivatingMatriz() throws Exception {
+            doThrow(new BusinessException("A matriz não pode ser inativada"))
+                    .when(clientBranchService).deactivateBranch(clientPublicId, branchPublicId);
+
+            mockMvc.perform(post("/clients/{publicId}/branches/{branchId}/deactivate",
+                            clientPublicId, branchPublicId))
+                    .andExpect(status().isUnprocessableEntity());
         }
     }
 }

@@ -3,6 +3,7 @@ package br.com.luizbrand.worklog.client;
 import br.com.luizbrand.worklog.client.dto.AddressRequest;
 import br.com.luizbrand.worklog.client.dto.BranchRequest;
 import br.com.luizbrand.worklog.client.dto.BranchResponse;
+import br.com.luizbrand.worklog.client.dto.BranchUpdateRequest;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
 import br.com.luizbrand.worklog.client.dto.ClientUpdateRequest;
@@ -359,6 +360,123 @@ class ClientMapperTest {
             clientMapper.updateClient(request, List.of(), client);
 
             assertThat(client.getIsEnabled()).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: updateBranch()")
+    class UpdateBranch {
+
+        private ClientBranch branch;
+
+        @BeforeEach
+        void setUpBranch() {
+            branch = new ClientBranch();
+            branch.setDocumento(CNPJ_VALIDO);
+            branch.setApelido("Filial SP");
+            branch.setInscricaoEstadual("123456789");
+            branch.setInscricaoMunicipal("987654321");
+            branch.setIsMatriz(false);
+            branch.setIsEnabled(true);
+            branch.setAddress(new Address("01310100", "Av. Paulista", "1000", "Sala 1",
+                    "Bela Vista", "São Paulo", "SP"));
+            branch.setContatos(new ArrayList<>());
+        }
+
+        @Test
+        @DisplayName("Should apply only the non-null fields")
+        void shouldApplyOnlyNonNullFields() {
+            BranchUpdateRequest request = new BranchUpdateRequest(null, null, "Filial Campinas",
+                    null, null, null, null);
+
+            clientMapper.updateBranch(request, branch);
+
+            assertThat(branch.getApelido()).isEqualTo("Filial Campinas");
+            assertThat(branch.getDocumento()).isEqualTo(CNPJ_VALIDO);
+            assertThat(branch.getInscricaoEstadual()).isEqualTo("123456789");
+            assertThat(branch.getInscricaoMunicipal()).isEqualTo("987654321");
+        }
+
+        @Test
+        @DisplayName("Should not touch the address when it is absent")
+        void shouldNotTouchAddressWhenAbsent() {
+            BranchUpdateRequest request = new BranchUpdateRequest(null, null, "Outro apelido",
+                    null, null, null, null);
+
+            clientMapper.updateBranch(request, branch);
+
+            assertThat(branch.getAddress()).isNotNull();
+            assertThat(branch.getAddress().getLogradouro()).isEqualTo("Av. Paulista");
+        }
+
+        @Test
+        @DisplayName("Should not touch isMatriz — the matriz transfer is a service rule")
+        void shouldNotTouchIsMatriz() {
+            BranchUpdateRequest request = new BranchUpdateRequest(null, true, null, null, null, null, null);
+
+            clientMapper.updateBranch(request, branch);
+
+            assertThat(branch.getIsMatriz()).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should not touch isEnabled — deactivation has its own endpoint")
+        void shouldNotTouchIsEnabled() {
+            BranchUpdateRequest request = new BranchUpdateRequest(null, null, "Outro apelido",
+                    null, null, null, null);
+
+            clientMapper.updateBranch(request, branch);
+
+            assertThat(branch.getIsEnabled()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should replace the whole contact list when it is present (D7)")
+        void shouldReplaceContactListWhenPresent() {
+            ClientContact antigo = new ClientContact();
+            antigo.setTipo(ContactType.EMAIL);
+            antigo.setValor("antigo@empresa.com");
+            branch.setContatos(new ArrayList<>(List.of(antigo)));
+
+            BranchUpdateRequest request = new BranchUpdateRequest(null, null, null, null, null, null,
+                    List.of(new ContactRequest(ContactType.TELEFONE, "1133334444", "Comercial", true)));
+
+            clientMapper.updateBranch(request, branch);
+
+            assertThat(branch.getContatos()).hasSize(1);
+            assertThat(branch.getContatos().get(0).getValor()).isEqualTo("1133334444");
+            assertThat(branch.getContatos().get(0).getTipo()).isEqualTo(ContactType.TELEFONE);
+            assertThat(branch.getContatos().get(0).getPrincipal()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should keep the existing contacts when the list is absent (D7)")
+        void shouldKeepContactsWhenAbsent() {
+            ClientContact antigo = new ClientContact();
+            antigo.setTipo(ContactType.EMAIL);
+            antigo.setValor("antigo@empresa.com");
+            branch.setContatos(new ArrayList<>(List.of(antigo)));
+
+            BranchUpdateRequest request = new BranchUpdateRequest(null, null, "Outro apelido",
+                    null, null, null, null);
+
+            clientMapper.updateBranch(request, branch);
+
+            assertThat(branch.getContatos()).hasSize(1);
+            assertThat(branch.getContatos().get(0).getValor()).isEqualTo("antigo@empresa.com");
+        }
+
+        @Test
+        @DisplayName("Should normalize the documento in the compact constructor")
+        void shouldNormalizeDocumento() {
+            BranchUpdateRequest request = new BranchUpdateRequest("12.abc.345/01de-35", null, null,
+                    null, null, null, null);
+
+            assertThat(request.documento()).isEqualTo("12ABC34501DE35");
+
+            clientMapper.updateBranch(request, branch);
+
+            assertThat(branch.getDocumento()).isEqualTo("12ABC34501DE35");
         }
     }
 }

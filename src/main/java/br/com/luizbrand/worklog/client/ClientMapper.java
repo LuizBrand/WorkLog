@@ -4,6 +4,7 @@ import br.com.luizbrand.worklog.client.dto.AddressRequest;
 import br.com.luizbrand.worklog.client.dto.AddressResponse;
 import br.com.luizbrand.worklog.client.dto.BranchRequest;
 import br.com.luizbrand.worklog.client.dto.BranchResponse;
+import br.com.luizbrand.worklog.client.dto.BranchUpdateRequest;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
 import br.com.luizbrand.worklog.client.dto.ClientSummary;
@@ -55,6 +56,23 @@ public abstract class ClientMapper {
     // public porque o ClientBranchService também consome: passou a fazer parte da
     // superfície do mapper, não é mais detalhe interno de toClient.
     public abstract ClientBranch toClientBranch(BranchRequest branchRequest);
+
+    /**
+     * PATCH parcial da filial. {@code isMatriz} e {@code isEnabled} ficam de
+     * fora de propósito: a troca de matriz precisa rebaixar a anterior (regra de
+     * serviço) e a inativação tem endpoint próprio.
+     */
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mappings({
+            @Mapping(target = "id", ignore = true),
+            @Mapping(target = "publicId", ignore = true),
+            @Mapping(target = "createdAt", ignore = true),
+            @Mapping(target = "updatedAt", ignore = true),
+            @Mapping(target = "isEnabled", ignore = true),
+            @Mapping(target = "isMatriz", ignore = true),
+            @Mapping(target = "client", ignore = true)
+    })
+    public abstract void updateBranch(BranchUpdateRequest branchUpdateRequest, @MappingTarget ClientBranch branch);
 
     @Mappings({
             @Mapping(target = "id", ignore = true),

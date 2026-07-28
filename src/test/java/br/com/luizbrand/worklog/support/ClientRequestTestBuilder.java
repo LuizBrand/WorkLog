@@ -53,6 +53,10 @@ public final class ClientRequestTestBuilder {
         return new ContactRequest(tipo, valor, null, null);
     }
 
+    public static ContactRequest aPrincipalContact(ContactType tipo, String valor) {
+        return new ContactRequest(tipo, valor, null, true);
+    }
+
     public ClientRequestTestBuilder withTipo(ClientType tipo) {
         this.tipo = tipo;
         return this;

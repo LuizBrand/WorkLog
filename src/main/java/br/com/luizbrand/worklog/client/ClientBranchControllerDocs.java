@@ -2,6 +2,7 @@ package br.com.luizbrand.worklog.client;
 
 import br.com.luizbrand.worklog.client.dto.BranchRequest;
 import br.com.luizbrand.worklog.client.dto.BranchResponse;
+import br.com.luizbrand.worklog.client.dto.BranchUpdateRequest;
 import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import br.com.luizbrand.worklog.exceptionhandler.ApiExceptionResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -67,5 +68,66 @@ public interface ClientBranchControllerDocs {
     ResponseEntity<BranchResponse> createBranch(
             @Parameter(description = "ID público do cliente (UUID)", required = true) UUID publicId,
             BranchRequest branchRequest);
+
+    @Operation(summary = "Atualizar filial",
+            description = """
+                    Atualiza parcialmente uma filial. Apenas os campos enviados são alterados (PATCH).
+
+                    **`contatos`**: ausente não altera nada; presente **substitui a lista inteira**.
+
+                    **`isMatriz: true`** promove esta filial a matriz e rebaixa a anterior na mesma
+                    transação. **`isMatriz: false`** sobre a matriz atual é rejeitado com 422 — o
+                    cliente ficaria sem matriz; promova outra filial no lugar.
+
+                    **`enabled` não existe aqui**: inativar filial tem endpoint próprio
+                    (`POST .../deactivate`).
+
+                    Reenviar o **próprio** documento sem alterá-lo é aceito e não devolve 409.
+
+                    Rejeitado com 422: cliente inativo; documento com checksum inválido para o tipo do
+                    cliente; rebaixar a matriz; promover uma filial inativa; mais de um contato
+                    marcado como `principal`.""")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Filial atualizada com sucesso",
+                    content = @Content(schema = @Schema(implementation = BranchResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Cliente ou filial não encontrada (inclui filial de outro cliente)",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Documento já cadastrado em outra filial",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    ResponseEntity<BranchResponse> updateBranch(
+            @Parameter(description = "ID público do cliente (UUID)", required = true) UUID publicId,
+            @Parameter(description = "ID público da filial (UUID)", required = true) UUID branchId,
+            BranchUpdateRequest branchUpdateRequest);
+
+    @Operation(summary = "Inativar filial",
+            description = """
+                    Inativa a filial (`enabled = false`). **Não é exclusão**: o registro permanece e
+                    continua aparecendo em `GET .../branches` sem filtro, ou com `status=INATIVO`.
+
+                    **Consequência importante:** o `documento` da filial inativa **continua ocupando a
+                    unicidade global**. Recadastrar aquele CNPJ em outro cliente devolve 409 enquanto
+                    esta filial existir.
+
+                    A **matriz não pode ser inativada** (422) — promova outra filial a matriz antes.
+
+                    Requer perfil ADMIN.""")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Filial inativada com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão (requer ADMIN)"),
+            @ApiResponse(responseCode = "404", description = "Cliente ou filial não encontrada (inclui filial de outro cliente)",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Tentativa de inativar a matriz, ou cliente inativo",
+                    content = @Content(schema = @Schema(implementation = ApiExceptionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    ResponseEntity<Void> deactivateBranch(
+            @Parameter(description = "ID público do cliente (UUID)", required = true) UUID publicId,
+            @Parameter(description = "ID público da filial (UUID)", required = true) UUID branchId);
 
 }

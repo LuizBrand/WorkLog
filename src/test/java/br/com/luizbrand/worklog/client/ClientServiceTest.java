@@ -1,10 +1,12 @@
 package br.com.luizbrand.worklog.client;
 
+import br.com.luizbrand.worklog.client.dto.BranchRequest;
 import br.com.luizbrand.worklog.client.dto.ClientFiltersParams;
 import br.com.luizbrand.worklog.client.dto.ClientRequest;
 import br.com.luizbrand.worklog.client.dto.ClientResponse;
 import br.com.luizbrand.worklog.client.dto.ClientUpdateRequest;
 import br.com.luizbrand.worklog.client.enums.ClientType;
+import br.com.luizbrand.worklog.client.enums.ContactType;
 import br.com.luizbrand.worklog.client.enums.StatusFiltro;
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.Conflict.ClientAlreadyExistsException;
@@ -32,6 +34,7 @@ import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.CNPJ_ALF
 import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.CNPJ_VALIDO;
 import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.CPF_VALIDO;
 import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.aClientRequest;
+import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.aPrincipalContact;
 import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.branch;
 import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.filial;
 import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.matriz;
@@ -482,6 +485,115 @@ class ClientServiceTest {
 
             assertThrows(ClientNotFoundException.class,
                     () -> clientService.findActiveClient(missing));
+        }
+    }
+
+    @Nested
+    @DisplayName("Débito 7.4 — coerência de tipo no PATCH do cliente")
+    class UpdateClientTipoCoherence {
+
+        private ClientUpdateRequest toPessoaFisica() {
+            return new ClientUpdateRequest(ClientType.PF, null, null, null, null, null);
+        }
+
+        @Test
+        @DisplayName("Trocar para PF um cliente com mais de uma filial ativa deve dar 422")
+        void shouldRejectSwitchingToPessoaFisicaWithMultipleActiveBranches() {
+            when(clientRepository.findByPublicId(publicId)).thenReturn(Optional.of(client));
+            when(clientBranchRepository.findByClientPublicIdAndIsEnabled(publicId, true))
+                    .thenReturn(List.of(new ClientBranch(), new ClientBranch()));
+
+            assertThrows(BusinessException.class,
+                    () -> clientService.updateClient(publicId, toPessoaFisica()));
+
+            verify(clientRepository, never()).save(any(Client.class));
+        }
+
+        @Test
+        @DisplayName("Trocar para PF um cliente com uma única filial ativa é permitido")
+        void shouldAllowSwitchingToPessoaFisicaWithSingleActiveBranch() {
+            when(clientRepository.findByPublicId(publicId)).thenReturn(Optional.of(client));
+            when(clientBranchRepository.findByClientPublicIdAndIsEnabled(publicId, true))
+                    .thenReturn(List.of(new ClientBranch()));
+            when(clientRepository.save(client)).thenReturn(client);
+            when(clientMapper.toClientResponse(client)).thenReturn(clientResponse);
+
+            assertNotNull(clientService.updateClient(publicId, toPessoaFisica()));
+        }
+
+        @Test
+        @DisplayName("Filiais inativas não contam para a regra")
+        void shouldIgnoreDisabledBranches() {
+            when(clientRepository.findByPublicId(publicId)).thenReturn(Optional.of(client));
+            when(clientBranchRepository.findByClientPublicIdAndIsEnabled(publicId, true))
+                    .thenReturn(List.of(new ClientBranch()));
+            when(clientRepository.save(client)).thenReturn(client);
+            when(clientMapper.toClientResponse(client)).thenReturn(clientResponse);
+
+            assertNotNull(clientService.updateClient(publicId, toPessoaFisica()));
+
+            verify(clientBranchRepository).findByClientPublicIdAndIsEnabled(publicId, true);
+        }
+
+        @Test
+        @DisplayName("PATCH sem tipo não deve consultar as filiais")
+        void shouldNotQueryBranchesWhenTipoIsAbsent() {
+            when(clientRepository.findByPublicId(publicId)).thenReturn(Optional.of(client));
+            when(clientRepository.save(client)).thenReturn(client);
+            when(clientMapper.toClientResponse(client)).thenReturn(clientResponse);
+
+            clientService.updateClient(publicId, anUpdateRequest("Novo nome", null));
+
+            verify(clientBranchRepository, never()).findByClientPublicIdAndIsEnabled(any(), any());
+        }
+
+        @Test
+        @DisplayName("Trocar para PJ não dispara a regra")
+        void shouldNotApplyRuleWhenSwitchingToPessoaJuridica() {
+            ClientUpdateRequest request = new ClientUpdateRequest(ClientType.PJ, null, null, null, null, null);
+            when(clientRepository.findByPublicId(publicId)).thenReturn(Optional.of(client));
+            when(clientRepository.save(client)).thenReturn(client);
+            when(clientMapper.toClientResponse(client)).thenReturn(clientResponse);
+
+            clientService.updateClient(publicId, request);
+
+            verify(clientBranchRepository, never()).findByClientPublicIdAndIsEnabled(any(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Débito 7.5 — máximo um contato principal por filial no createClient()")
+    class CreateClientPrincipalContactRule {
+
+        @Test
+        @DisplayName("Dois contatos principal na mesma filial devem dar 422")
+        void shouldRejectMultiplePrincipalContactsInSameBranch() {
+            BranchRequest matrizComDoisPrincipais = new BranchRequest(CNPJ_VALIDO, true, null, null, null, null,
+                    List.of(aPrincipalContact(ContactType.EMAIL, "a@empresa.com"),
+                            aPrincipalContact(ContactType.TELEFONE, "1133334444")));
+            ClientRequest request = aClientRequest().withBranches(matrizComDoisPrincipais).build();
+            when(clientRepository.findByName(request.name())).thenReturn(Optional.empty());
+
+            assertThrows(BusinessException.class, () -> clientService.createClient(request));
+
+            verify(clientRepository, never()).save(any(Client.class));
+        }
+
+        @Test
+        @DisplayName("Um principal por filial é aceito, mesmo com duas filiais")
+        void shouldAcceptOnePrincipalPerBranch() {
+            BranchRequest matriz = new BranchRequest(CNPJ_VALIDO, true, null, null, null, null,
+                    List.of(aPrincipalContact(ContactType.EMAIL, "matriz@empresa.com")));
+            BranchRequest filial = new BranchRequest(CNPJ_ALFANUMERICO_VALIDO, false, null, null, null, null,
+                    List.of(aPrincipalContact(ContactType.EMAIL, "filial@empresa.com")));
+            ClientRequest request = aClientRequest().withBranches(matriz, filial).build();
+            when(clientRepository.findByName(request.name())).thenReturn(Optional.empty());
+            when(clientBranchRepository.existsByDocumento(any())).thenReturn(false);
+            when(clientMapper.toClient(any(ClientRequest.class), anyList())).thenReturn(client);
+            when(clientRepository.save(client)).thenReturn(client);
+            when(clientMapper.toClientResponse(client)).thenReturn(clientResponse);
+
+            assertNotNull(clientService.createClient(request));
         }
     }
 }
