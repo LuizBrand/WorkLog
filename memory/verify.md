@@ -26,7 +26,7 @@ Every task's verification criteria must pass before it is marked complete in
 - [ ] Public endpoints stay limited to `/worklog/auth/**`, `/swagger-ui/**`, `/v3/api-docs/**`, `/swagger-ui.html`. Everything else requires authentication.
 
 ## Tactile verification (when code runs)
-- [ ] Bring up the dependencies: `cd Docker && docker compose up -d`.
+- [ ] Bring up the dependencies: `docker compose --env-file .env -f Docker/docker-compose.yaml up -d` (the `.env` is in the **root**; `cd Docker && docker compose up -d` silently drops the variables and maps random ports).
 - [ ] `./mvnw spring-boot:run` (default `dev` profile) starts cleanly and Flyway applies all migrations without `validate` failures.
 - [ ] New endpoint exercised manually with a valid Bearer token (curl or Swagger UI at `/swagger-ui`) — happy path **plus** at least one edge case (404, 422, 401 as appropriate).
 - [ ] Application logs show no unexpected exceptions, Hibernate warnings, or silent stack traces.

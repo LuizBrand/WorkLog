@@ -66,7 +66,7 @@ No MCP servers configured for this repository.
 - `./mvnw test` — full JUnit 5 + Mockito + AssertJ + Spring Security Test suite
 - `./mvnw clean compile` — compile, including Lombok / MapStruct generation
 - `./mvnw clean package` — build the jar
-- `cd Docker && docker compose up -d` — bring up Postgres + Redis before running
+- `docker compose --env-file .env -f Docker/docker-compose.yaml up -d` — bring up Postgres + Redis before running (the `.env` is in the **root**, not in `Docker/`; without `--env-file` the stack comes up unconfigured with random ports)
 - `spring-boot-maven-plugin` excludes Lombok from the packaged jar
 - `maven-compiler-plugin` configures `annotationProcessorPaths` for Lombok and MapStruct
 

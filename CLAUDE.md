@@ -222,7 +222,11 @@ user approves a plan, execute without repeating it.
 ## How to run
 
 ```bash
-cd Docker && docker compose up -d   # starts PostgreSQL + Redis
+# starts PostgreSQL + Redis
+# O .env mora na RAIZ, não em Docker/ — sem o --env-file a stack sobe sem as
+# variáveis e o Docker mapeia portas aleatórias.
+docker compose --env-file .env -f Docker/docker-compose.yaml up -d
+
 ./mvnw spring-boot:run              # runs with dev profile
 ```
 

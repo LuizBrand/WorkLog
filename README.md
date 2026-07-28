@@ -130,11 +130,15 @@ Global `RestExceptionHandler` maps exceptions to standardized `ApiExceptionRespo
 ### 1. Start infrastructure
 
 ```bash
-cd Docker
-docker compose up -d
+docker compose --env-file .env -f Docker/docker-compose.yaml up -d
 ```
 
 This starts PostgreSQL (port 5432) and Redis (port 6379). Credentials are configured in the `.env` file.
+
+> The `.env` lives in the **project root**, not in `Docker/`. Running
+> `cd Docker && docker compose up -d` starts the stack **without** those
+> variables, so Docker assigns random host ports and the app cannot connect.
+> Always pass `--env-file .env -f Docker/docker-compose.yaml` from the root.
 
 ### 2. Run the application
 
