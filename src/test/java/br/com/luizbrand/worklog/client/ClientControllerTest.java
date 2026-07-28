@@ -297,15 +297,27 @@ class ClientControllerTest {
         }
 
         @Test
-        @DisplayName("Should return 400 Bad Request when systemsPublicIds is empty")
-        void shouldReturn400OnEmptySystems() throws Exception {
-            ClientRequest invalid = aClientRequest().withName("Client Name").withSystems(List.of()).build();
+        @DisplayName("Should create the client when systemsPublicIds is empty — associating a system is optional")
+        void shouldReturn201OnEmptySystems() throws Exception {
+            ClientRequest request = aClientRequest().withName("Client Name").withSystems(List.of()).build();
+            when(clientService.createClient(any(ClientRequest.class))).thenReturn(clientResponse);
 
             mockMvc.perform(post("/clients/")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(invalid)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated());
+        }
+
+        @Test
+        @DisplayName("Should create the client when systemsPublicIds is absent")
+        void shouldReturn201OnNullSystems() throws Exception {
+            ClientRequest request = aClientRequest().withName("Client Name").withSystems((List<UUID>) null).build();
+            when(clientService.createClient(any(ClientRequest.class))).thenReturn(clientResponse);
+
+            mockMvc.perform(post("/clients/")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated());
         }
 
         @Test

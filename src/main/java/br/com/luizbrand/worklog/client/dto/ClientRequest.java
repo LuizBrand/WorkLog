@@ -22,7 +22,8 @@ public record ClientRequest(
         @Size(max = 100, message = "O nome fantasia deve ter no máximo 100 caracteres")
         String nomeFantasia,
         RegimeTributario regimeTributario,
-        @NotEmpty(message = "A lista de sistemas não pode estar vazia")
+        // Associar sistema é opcional: um cliente pode ser cadastrado antes de se
+        // saber quais produtos ele usa, e um PF frequentemente não usa nenhum.
         List<UUID> systemsPublicIds,
         @Valid
         @NotEmpty(message = "Informe ao menos a matriz")
