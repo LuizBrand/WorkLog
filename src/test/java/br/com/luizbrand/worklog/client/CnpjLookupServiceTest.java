@@ -7,6 +7,7 @@ import br.com.luizbrand.worklog.client.dto.ContactRequest;
 import br.com.luizbrand.worklog.client.enums.ClientType;
 import br.com.luizbrand.worklog.client.enums.ContactType;
 import br.com.luizbrand.worklog.client.enums.RegimeTributario;
+import br.com.luizbrand.worklog.client.integration.CnpjaCache;
 import br.com.luizbrand.worklog.client.integration.CnpjaClient;
 import br.com.luizbrand.worklog.client.integration.dto.CnpjaOfficeResponse;
 import br.com.luizbrand.worklog.exception.BadRequest.InvalidDocumentoException;
@@ -20,10 +21,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -35,6 +39,9 @@ class CnpjLookupServiceTest {
 
     @Mock
     private CnpjaClient cnpjaClient;
+
+    @Mock
+    private CnpjaCache cnpjaCache;
 
     @InjectMocks
     private CnpjLookupService cnpjLookupService;
@@ -427,6 +434,74 @@ class CnpjLookupServiceTest {
 
             assertThat(response.situacaoCadastral()).isNull();
             assertThat(response.situacaoAtiva()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("Cache")
+    class Cache {
+
+        @Test
+        @DisplayName("Cache quente: não gasta consulta na CNPJá")
+        void shouldNotCallProviderOnCacheHit() {
+            when(cnpjaCache.get(CNPJ_AMBEV_MANAUS)).thenReturn(Optional.of(office(false)));
+
+            CnpjLookupResponse response = cnpjLookupService.lookup(CNPJ_AMBEV_MANAUS);
+
+            // O ponto inteiro da fatia: 5 consultas/min por IP são o gargalo do
+            // desenho, e cadastrar duas filiais do mesmo grupo é rotina.
+            verifyNoInteractions(cnpjaClient);
+            assertThat(response.name()).isEqualTo("AMBEV S.A.");
+            assertThat(response.branches().get(0).inscricaoEstadual()).isEqualTo("054591406");
+        }
+
+        @Test
+        @DisplayName("Cache frio: consulta a CNPJá e guarda a resposta")
+        void shouldPopulateCacheOnMiss() {
+            when(cnpjaCache.get(CNPJ_AMBEV_MANAUS)).thenReturn(Optional.empty());
+            CnpjaOfficeResponse office = office(false);
+            when(cnpjaClient.findOffice(CNPJ_AMBEV_MANAUS)).thenReturn(office);
+
+            cnpjLookupService.lookup(CNPJ_AMBEV_MANAUS);
+
+            verify(cnpjaClient).findOffice(CNPJ_AMBEV_MANAUS);
+            verify(cnpjaCache).put(CNPJ_AMBEV_MANAUS, office);
+        }
+
+        @Test
+        @DisplayName("O cache é consultado pelo documento normalizado")
+        void shouldUseNormalizedDocumentAsKey() {
+            when(cnpjaCache.get(CNPJ_AMBEV_MANAUS)).thenReturn(Optional.of(office(false)));
+
+            // Sem normalizar antes, "07.526.557/0116-59" e "07526557011659"
+            // seriam duas entradas diferentes do mesmo CNPJ.
+            cnpjLookupService.lookup("07.526.557/0116-59");
+
+            verify(cnpjaCache).get(CNPJ_AMBEV_MANAUS);
+        }
+
+        @Test
+        @DisplayName("Documento inválido não toca no cache nem na CNPJá")
+        void shouldNotTouchCacheForInvalidDocument() {
+            assertThatThrownBy(() -> cnpjLookupService.lookup("123"))
+                    .isInstanceOf(InvalidDocumentoException.class);
+
+            verifyNoInteractions(cnpjaCache);
+            verifyNoInteractions(cnpjaClient);
+        }
+
+        @Test
+        @DisplayName("Erro da CNPJá não é cacheado")
+        void shouldNotCacheFailures() {
+            when(cnpjaCache.get(CNPJ_AMBEV_MANAUS)).thenReturn(Optional.empty());
+            when(cnpjaClient.findOffice(CNPJ_AMBEV_MANAUS))
+                    .thenThrow(new CnpjNotFoundException("CNPJ não encontrado"));
+
+            assertThatThrownBy(() -> cnpjLookupService.lookup(CNPJ_AMBEV_MANAUS))
+                    .isInstanceOf(CnpjNotFoundException.class);
+
+            // Cachear o 404 esconderia por 24h um CNPJ que acabou de ser aberto.
+            verify(cnpjaCache, never()).put(anyString(), any());
         }
     }
 

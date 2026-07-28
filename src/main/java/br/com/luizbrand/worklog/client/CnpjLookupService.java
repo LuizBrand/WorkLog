@@ -7,6 +7,7 @@ import br.com.luizbrand.worklog.client.dto.ContactRequest;
 import br.com.luizbrand.worklog.client.enums.ClientType;
 import br.com.luizbrand.worklog.client.enums.ContactType;
 import br.com.luizbrand.worklog.client.enums.RegimeTributario;
+import br.com.luizbrand.worklog.client.integration.CnpjaCache;
 import br.com.luizbrand.worklog.client.integration.CnpjaClient;
 import br.com.luizbrand.worklog.client.integration.dto.CnpjaOfficeResponse;
 import br.com.luizbrand.worklog.client.validation.DocumentoChecksum;
@@ -29,9 +30,11 @@ import java.util.List;
 public class CnpjLookupService {
 
     private final CnpjaClient cnpjaClient;
+    private final CnpjaCache cnpjaCache;
 
-    public CnpjLookupService(CnpjaClient cnpjaClient) {
+    public CnpjLookupService(CnpjaClient cnpjaClient, CnpjaCache cnpjaCache) {
         this.cnpjaClient = cnpjaClient;
+        this.cnpjaCache = cnpjaCache;
     }
 
     public CnpjLookupResponse lookup(String documento) {
@@ -48,7 +51,20 @@ public class CnpjLookupService {
             throw new InvalidDocumentoException(DocumentoChecksum.mensagemPara(ClientType.PJ));
         }
 
-        return toLookupResponse(cnpjaClient.findOffice(cnpj));
+        // O mapeamento é reaplicado mesmo em cache quente: o que se guarda é a
+        // resposta crua do provedor, então mudar uma regra de tradução vale na
+        // hora, sem esperar o TTL expirar.
+        return toLookupResponse(cnpjaCache.get(cnpj).orElseGet(() -> consultarEGuardar(cnpj)));
+    }
+
+    /**
+     * Só resposta bem-sucedida vai para o cache. Guardar um 404 esconderia por
+     * 24h um CNPJ recém-aberto na Receita.
+     */
+    private CnpjaOfficeResponse consultarEGuardar(String cnpj) {
+        CnpjaOfficeResponse office = cnpjaClient.findOffice(cnpj);
+        cnpjaCache.put(cnpj, office);
+        return office;
     }
 
     private CnpjLookupResponse toLookupResponse(CnpjaOfficeResponse office) {
@@ -82,11 +98,17 @@ public class CnpjLookupService {
     /**
      * Inscrição estadual do estabelecimento, que é a da <b>UF do endereço</b>.
      *
-     * <p>A lista costuma trazer mais de uma: a IE é por estabelecimento, e quem
-     * vende para outros estados se inscreve neles como substituto tributário.
-     * A Ambev de Manaus, por exemplo, tem quatro — pegar a primeira traria a de
-     * Roraima. Dentro da UF, prefere IE Normal e habilitada; sem nenhuma na UF,
-     * deixa em branco para o usuário preencher.
+     * <p><b>Dormente na API pública.</b> Verificado contra a API real em
+     * 2026-07-28: {@code open.cnpja.com} devolve {@code "registrations": null},
+     * então na prática esta regra sempre cai no retorno nulo e a IE segue
+     * preenchimento manual. O plano da fase afirmava o contrário; a afirmação
+     * era falsa. O código fica porque a API comercial devolve o bloco — trocar
+     * a {@code base-url} basta para ele passar a valer.
+     *
+     * <p>Quando o bloco existe, vem mais de uma inscrição: a IE é por
+     * estabelecimento, e quem vende para outros estados se inscreve neles como
+     * substituto tributário. A Ambev de Manaus tem quatro — pegar a primeira
+     * traria a de Roraima. Dentro da UF, prefere IE Normal e habilitada.
      */
     private String inscricaoEstadual(CnpjaOfficeResponse office) {
         if (office.registrations() == null || office.address() == null

@@ -17,5 +17,9 @@ import java.time.Duration;
 public record CnpjaProperties(
         @DefaultValue("https://open.cnpja.com") String baseUrl,
         @DefaultValue("3s") Duration connectTimeout,
-        @DefaultValue("10s") Duration readTimeout) {
+        @DefaultValue("10s") Duration readTimeout,
+        // TTL curto de propósito: a CNPJá garante defasagem de no máximo 45
+        // dias, mas cadastro é operação rara e cache longo esconderia correção
+        // recente na Receita.
+        @DefaultValue("24h") Duration cacheTtl) {
 }

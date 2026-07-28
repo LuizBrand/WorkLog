@@ -24,10 +24,11 @@ public interface ClientLookupControllerDocs {
                     inválido devolve 400 sem gastar requisição no provedor, que limita a
                     5 consultas por minuto por endereço IP.
 
-                    A inscrição estadual devolvida é a da **UF do endereço** do
-                    estabelecimento, preferindo IE Normal e habilitada — um mesmo CNPJ pode
-                    ter várias inscrições, as demais sendo substituição tributária em
-                    estados para onde ele vende. Sem inscrição na UF, volta em branco.
+                    **A inscrição estadual volta sempre em branco** com o provedor público:
+                    verificado contra a API real, `open.cnpja.com` não devolve o bloco de
+                    inscrições. Segue preenchimento manual. (A seleção da IE da UF do
+                    endereço está implementada e passa a valer sozinha caso o backend seja
+                    apontado para a API comercial, que devolve o bloco.)
 
                     O regime tributário só é preenchido quando o provedor afirma: MEI ou
                     Simples Nacional. Lucro Presumido e Lucro Real não existem no contrato e
@@ -41,6 +42,10 @@ public interface ClientLookupControllerDocs {
                     A inscrição municipal não existe no contrato do provedor e volta sempre
                     em branco. Nenhum contato vem marcado como principal: quem escolhe é o
                     usuário.
+
+                    As respostas bem-sucedidas ficam em cache no Redis por 24h
+                    (`worklog.cnpja.cache-ttl`), então repetir a consulta do mesmo CNPJ não
+                    consome o limite do provedor. Erros nunca são cacheados.
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Consulta realizada com sucesso",
