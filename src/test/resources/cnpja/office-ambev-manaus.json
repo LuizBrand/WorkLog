@@ -1,0 +1,156 @@
+{
+  "taxId": "07526557011659",
+  "updated": "2026-07-20T14:31:02.517Z",
+  "company": {
+    "id": "07526557",
+    "name": "AMBEV S.A.",
+    "equity": 57614174310.29,
+    "nature": {
+      "id": 2054,
+      "text": "Sociedade Anônima Aberta"
+    },
+    "size": {
+      "id": 5,
+      "acronym": "DEMAIS",
+      "text": "Demais"
+    },
+    "simples": {
+      "optant": false,
+      "since": null
+    },
+    "simei": {
+      "optant": false,
+      "since": null
+    },
+    "members": [
+      {
+        "since": "2019-04-30",
+        "role": {
+          "id": 10,
+          "text": "Diretor"
+        },
+        "person": {
+          "id": "***111222**",
+          "type": "NATURAL",
+          "name": "FULANO DE TAL",
+          "taxId": "***111222**",
+          "age": "41-50"
+        }
+      }
+    ]
+  },
+  "alias": "AMBEV FILIAL MANAUS",
+  "founded": "1998-11-25",
+  "head": false,
+  "statusDate": "2005-11-03",
+  "status": {
+    "id": 2,
+    "text": "Ativa"
+  },
+  "address": {
+    "municipality": 1302603,
+    "street": "Avenida Buriti",
+    "number": "4000",
+    "details": "Galpao 2",
+    "district": "Distrito Industrial",
+    "city": "Manaus",
+    "state": "AM",
+    "zip": "69075000",
+    "country": {
+      "id": 76,
+      "name": "Brasil"
+    }
+  },
+  "phones": [
+    {
+      "type": "LANDLINE",
+      "area": "92",
+      "number": "21238000"
+    },
+    {
+      "type": "MOBILE",
+      "area": "11",
+      "number": "999998888"
+    }
+  ],
+  "emails": [
+    {
+      "ownership": "ACCOUNTING",
+      "address": "contabilidade@ambev.com.br",
+      "domain": "ambev.com.br"
+    },
+    {
+      "ownership": "CORPORATE",
+      "address": "atendimento@ambev.com.br",
+      "domain": "ambev.com.br"
+    }
+  ],
+  "mainActivity": {
+    "id": 1113502,
+    "text": "Fabricação de cervejas e chopes"
+  },
+  "sideActivities": [
+    {
+      "id": 4635499,
+      "text": "Comércio atacadista de cerveja, chope e refrigerante"
+    }
+  ],
+  "registrations": [
+    {
+      "number": "054591406",
+      "state": "AM",
+      "enabled": true,
+      "statusDate": "1998-12-01",
+      "status": {
+        "id": 1,
+        "text": "Sem restrição"
+      },
+      "type": {
+        "id": 1,
+        "text": "IE Normal"
+      }
+    },
+    {
+      "number": "240519525",
+      "state": "RR",
+      "enabled": true,
+      "statusDate": "2011-05-10",
+      "status": {
+        "id": 1,
+        "text": "Sem restrição"
+      },
+      "type": {
+        "id": 2,
+        "text": "IE Substituto Tributário"
+      }
+    },
+    {
+      "number": "159195853",
+      "state": "PA",
+      "enabled": true,
+      "statusDate": "2009-03-18",
+      "status": {
+        "id": 1,
+        "text": "Sem restrição"
+      },
+      "type": {
+        "id": 2,
+        "text": "IE Substituto Tributário"
+      }
+    },
+    {
+      "number": "0108826400193",
+      "state": "AC",
+      "enabled": true,
+      "statusDate": "2013-07-22",
+      "status": {
+        "id": 1,
+        "text": "Sem restrição"
+      },
+      "type": {
+        "id": 2,
+        "text": "IE Substituto Tributário"
+      }
+    }
+  ]
+}

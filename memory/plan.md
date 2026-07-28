@@ -62,10 +62,17 @@ Confirmed from the controllers in `src/main/java/.../`:
 
 ## Current Phase
 
-Backend MVP v1 — Phases 1–5 shipped
-(commits `a3a8b72`, `c812722`, `0b65888`, `be684bc`, `63d5225`). Phase 6
-(default sort) was discarded per user direction. The MVP v1 plan is
-exhausted; awaiting user direction on next initiative.
+**Fase 6 — integração CNPJá** (branch `feat/client-registration-expasion`),
+plano em `FASE-6-integracao-cnpja.md`. Fatia **6A entregue** em 2026-07-28
+(`GET /clients/lookup`); faltam 6B (inscrição estadual, regime tributário,
+situação cadastral) e 6C (cache no Redis).
+
+Antes disso: o backend MVP v1 (fases 1–5) e a **expansão do cadastro de
+clientes** (empresa + filiais + documento + contatos + endereço, fases 1–5 do
+`PLANO-expansao-cadastro-clientes.md`) foram entregues e verificados ponta a
+ponta contra o Postgres real. O detalhamento por fatia, com os porquês, está em
+`memory/progress.md` — a descrição de módulos e endpoints abaixo é anterior à
+expansão e **não** lista as rotas de filial.
 
 ## Vertical Slices
 

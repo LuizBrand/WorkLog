@@ -31,6 +31,13 @@ worklog:
   cors:
     allowed-origins:
       - http://localhost:3000
+  # Consulta de CNPJ. A API pública não exige cadastro nem chave; o limite é de
+  # 5 consultas por minuto por endereço IP. Trocar a base-url (e adicionar o
+  # header de chave no CnpjaClient) é o caminho para a API comercial.
+  cnpja:
+    base-url: https://open.cnpja.com
+    connect-timeout: 3s
+    read-timeout: 10s
   cookies:
     secure: false
     same-site: Strict

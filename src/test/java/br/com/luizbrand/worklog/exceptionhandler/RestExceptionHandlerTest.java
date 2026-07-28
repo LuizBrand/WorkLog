@@ -1,8 +1,12 @@
 package br.com.luizbrand.worklog.exceptionhandler;
 
+import br.com.luizbrand.worklog.exception.BadRequest.InvalidDocumentoException;
+import br.com.luizbrand.worklog.exception.BadRequest.InvalidRequestException;
 import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.Business.RefreshTokenException;
 import br.com.luizbrand.worklog.exception.Conflict.ResourceAlreadyExistsException;
+import br.com.luizbrand.worklog.exception.External.ExternalRateLimitException;
+import br.com.luizbrand.worklog.exception.External.ExternalServiceUnavailableException;
 import br.com.luizbrand.worklog.exception.NotFound.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -139,8 +143,77 @@ class RestExceptionHandlerTest {
                 .andExpect(jsonPath("$.message").value(not(containsString("client_branches"))));
     }
 
+    @Test
+    @DisplayName("InvalidRequestException -> 400 with Bad Request body")
+    void shouldReturn400ForInvalidRequest() throws Exception {
+        mockMvc.perform(get("/throw/invalid-request"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("parâmetro inválido"))
+                .andExpect(jsonPath("$.path").value("/throw/invalid-request"))
+                .andExpect(jsonPath("$.fieldErrors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("InvalidDocumentoException herda o handler de 400 da classe base")
+    void shouldReturn400ForInvalidDocumento() throws Exception {
+        mockMvc.perform(get("/throw/invalid-documento"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("CNPJ inválido"));
+    }
+
+    @Test
+    @DisplayName("ExternalRateLimitException -> 429 with Too Many Requests body")
+    void shouldReturn429ForExternalRateLimit() throws Exception {
+        mockMvc.perform(get("/throw/rate-limit"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.error").value("Too Many Requests"))
+                .andExpect(jsonPath("$.message").value("limite atingido"))
+                .andExpect(jsonPath("$.path").value("/throw/rate-limit"))
+                .andExpect(jsonPath("$.fieldErrors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("ExternalServiceUnavailableException -> 503 with Service Unavailable body")
+    void shouldReturn503ForExternalServiceUnavailable() throws Exception {
+        mockMvc.perform(get("/throw/unavailable"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.error").value("Service Unavailable"))
+                .andExpect(jsonPath("$.message").value("serviço externo fora do ar"))
+                .andExpect(jsonPath("$.path").value("/throw/unavailable"))
+                .andExpect(jsonPath("$.fieldErrors").doesNotExist());
+    }
+
     @RestController
     static class ThrowingController {
+
+        @GetMapping("/throw/invalid-request")
+        void throwInvalidRequest() {
+            throw new InvalidRequestException("parâmetro inválido");
+        }
+
+        @GetMapping("/throw/invalid-documento")
+        void throwInvalidDocumento() {
+            throw new InvalidDocumentoException("CNPJ inválido");
+        }
+
+        @GetMapping("/throw/rate-limit")
+        void throwRateLimit() {
+            throw new ExternalRateLimitException("limite atingido");
+        }
+
+        @GetMapping("/throw/unavailable")
+        void throwUnavailable() {
+            throw new ExternalServiceUnavailableException("serviço externo fora do ar");
+        }
 
         @GetMapping("/throw/integrity")
         void throwIntegrityViolation() {
