@@ -11,6 +11,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -113,8 +116,39 @@ class RestExceptionHandlerTest {
                 .andExpect(jsonPath("$.fieldErrors.name").value("must not be blank"));
     }
 
+    @Test
+    @DisplayName("DataIntegrityViolationException -> 409 with Conflict body")
+    void shouldReturn409ForDataIntegrityViolation() throws Exception {
+        mockMvc.perform(get("/throw/integrity"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.path").value("/throw/integrity"))
+                .andExpect(jsonPath("$.fieldErrors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("DataIntegrityViolationException must not leak the database message")
+    void shouldNotLeakDatabaseDetailsOnIntegrityViolation() throws Exception {
+        mockMvc.perform(get("/throw/integrity"))
+                .andExpect(status().isConflict())
+                // A mensagem crua traz nome de constraint, tabela e coluna — detalhe
+                // de schema que não deve chegar ao cliente.
+                .andExpect(jsonPath("$.message").value(not(containsString("ux_client_branches_matriz"))))
+                .andExpect(jsonPath("$.message").value(not(containsString("client_branches"))));
+    }
+
     @RestController
     static class ThrowingController {
+
+        @GetMapping("/throw/integrity")
+        void throwIntegrityViolation() {
+            throw new DataIntegrityViolationException(
+                    "could not execute statement [ERROR: duplicate key value violates unique constraint "
+                            + "\"ux_client_branches_matriz\"; Detail: Key (client_id)=(7) already exists.] "
+                            + "[insert into client_branches ...]");
+        }
 
         @GetMapping("/throw/not-found")
         void throwNotFound() {

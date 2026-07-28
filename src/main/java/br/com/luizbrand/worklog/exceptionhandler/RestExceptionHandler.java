@@ -4,6 +4,9 @@ import br.com.luizbrand.worklog.exception.Business.BusinessException;
 import br.com.luizbrand.worklog.exception.Business.RefreshTokenException;
 import br.com.luizbrand.worklog.exception.Conflict.ResourceAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.ResourceNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +22,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class RestExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(RestExceptionHandler.class);
 
     @ExceptionHandler(ResourceAlreadyExistsException.class)
     public ResponseEntity<ApiExceptionResponse> handleEmailAlreadyExists(ResourceAlreadyExistsException ex, WebRequest request) {
@@ -87,6 +92,38 @@ public class RestExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(exceptionResponse, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    /**
+     * Fecha a janela de corrida das checagens de unicidade feitas em serviço:
+     * duas requisições simultâneas passam as duas pelo {@code existsBy...} e a
+     * segunda estoura na constraint do banco — que sem este handler viraria 500.
+     *
+     * <p>Cuidados desta escolha, que é <b>global</b>:
+     * <ul>
+     *   <li>A mensagem devolvida é genérica de propósito. A original traz nome de
+     *       constraint, tabela e coluna — detalhe de schema que não deve vazar.</li>
+     *   <li>Nem toda violação de integridade é conflito do cliente (violação de FK,
+     *       por exemplo, costuma ser bug do servidor). Por isso a causa real é
+     *       logada em WARN: sem isso, um bug de servidor viraria um 409 silencioso
+     *       e sem rastro.</li>
+     * </ul>
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiExceptionResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, WebRequest request) {
+
+        logger.warn("Violação de integridade tratada como 409 em {}", request.getDescription(false), ex);
+
+        ApiExceptionResponse exceptionResponse = ApiExceptionResponse.builder()
+                .mediaType(MediaType.APPLICATION_JSON)
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("Conflict")
+                .message("A operação viola uma restrição de integridade dos dados")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return new ResponseEntity<>(exceptionResponse, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(RefreshTokenException.class)
