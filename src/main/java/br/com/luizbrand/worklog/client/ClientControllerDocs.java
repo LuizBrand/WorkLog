@@ -13,22 +13,29 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
-import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Clientes", description = "Gerenciamento de clientes e seus sistemas associados")
 public interface ClientControllerDocs {
 
     @Operation(summary = "Listar clientes",
-            description = "Retorna todos os clientes com suporte a filtros por nome, status (ATIVO/INATIVO/TODOS) e sistemas associados.")
+            description = "Retorna os clientes com suporte a filtros por nome, status (ATIVO/INATIVO/TODOS), tipo, documento e sistemas associados. "
+                    + "A paginação é opcional: sem `page` e sem `size` a resposta é um array de `ClientResponse`; "
+                    + "informando qualquer um dos dois, a resposta vira um `Page` (`content`, `totalElements`, `totalPages`, `number`, `size`). "
+                    + "Padrões da versão paginada: 12 itens por página ordenados por `name` ascendente.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Lista de clientes retornada com sucesso",
+            @ApiResponse(responseCode = "200", description = "Lista (ou página) de clientes retornada com sucesso",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ClientResponse.class)))),
             @ApiResponse(responseCode = "401", description = "Não autenticado")
     })
-    ResponseEntity<List<ClientResponse>> findAllClients(ClientFiltersParams filtersParams);
+    ResponseEntity<Object> findAllClients(
+            ClientFiltersParams filtersParams,
+            Pageable pageable,
+            @Parameter(description = "Índice da página (base 0). Presente = resposta paginada.") Integer page,
+            @Parameter(description = "Itens por página (padrão 12). Presente = resposta paginada.") Integer size);
 
     @Operation(summary = "Buscar cliente por ID",
             description = "Retorna um cliente específico pelo seu publicId (UUID).")

@@ -51,8 +51,8 @@ Confirmed from the controllers in `src/main/java/.../`:
   `POST /refresh`, `POST /logout`
 - **users** (`/users`): `GET /`, `GET /{publicId}`,
   `POST /{publicId}/deactivate` (`@PreAuthorize("hasRole('ADMIN')")`)
-- **clients** (`/clients`): `GET ` (with `ClientFiltersParams`),
-  `GET /{publicId}`, `POST /`, `PATCH /{publicId}`
+- **clients** (`/clients`): `GET ` (with `ClientFiltersParams` + `Pageable`
+  opcional), `GET /{publicId}`, `POST /`, `PATCH /{publicId}`
 - **systems** (`/systems`): `GET `, `GET /{publicId}`, `POST /`,
   `PATCH /{publicId}`
 - **tickets** (`/tickets`): `GET ` with `TicketFiltersParams` + `Pageable`

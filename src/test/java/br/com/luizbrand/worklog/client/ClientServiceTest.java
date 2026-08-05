@@ -15,6 +15,11 @@ import br.com.luizbrand.worklog.exception.NotFound.ClientNotFoundException;
 import br.com.luizbrand.worklog.support.ClientTestBuilder;
 import br.com.luizbrand.worklog.system.SystemService;
 import br.com.luizbrand.worklog.system.Systems;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -228,6 +233,72 @@ class ClientServiceTest {
             List<ClientResponse> result = clientService.findAllClients(filters);
 
             assertTrue(result.isEmpty());
+            verifyNoInteractions(clientMapper);
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: findAllClients() paginado")
+    class FindAllClientsPaged {
+
+        @Test
+        @DisplayName("Should delegate to the repository with the specification and the pageable, mapping the page content")
+        void shouldReturnMappedPage() {
+            ClientFiltersParams filters = new ClientFiltersParams("acme", StatusFiltro.ATIVO, Collections.emptyList(), null, null);
+            Pageable pageable = PageRequest.of(1, 12, Sort.by("name"));
+            client.setId(1L);
+            Client other = ClientTestBuilder.aClient().withName("Other").build();
+            other.setId(2L);
+            ClientResponse otherResponse = aClientResponse(other.getPublicId(), other.getName());
+
+            when(clientRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(new PageImpl<>(List.of(client, other), pageable, 26));
+            when(clientMapper.toClientResponse(client)).thenReturn(clientResponse);
+            when(clientMapper.toClientResponse(other)).thenReturn(otherResponse);
+
+            Page<ClientResponse> result = clientService.findAllClients(filters, pageable);
+
+            assertEquals(2, result.getNumberOfElements());
+            assertEquals(26, result.getTotalElements());
+            assertEquals(3, result.getTotalPages());
+            assertEquals(1, result.getNumber());
+            assertEquals(List.of(clientResponse, otherResponse), result.getContent());
+        }
+
+        @Test
+        @DisplayName("Should pre-fetch the branches of the page content in a single extra query")
+        void shouldPrefetchBranchesForPageContent() {
+            ClientFiltersParams filters = new ClientFiltersParams(null, null, null, null, null);
+            Pageable pageable = PageRequest.of(0, 12);
+            client.setId(1L);
+            Client other = ClientTestBuilder.aClient().withName("Other").build();
+            other.setId(2L);
+
+            when(clientRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(new PageImpl<>(List.of(client, other), pageable, 2));
+            when(clientMapper.toClientResponse(any(Client.class))).thenReturn(clientResponse);
+
+            clientService.findAllClients(filters, pageable);
+
+            ArgumentCaptor<Collection<Long>> idsCaptor = ArgumentCaptor.forClass(Collection.class);
+            verify(clientRepository, times(1)).findDistinctByIdIn(idsCaptor.capture());
+            assertEquals(List.of(1L, 2L), List.copyOf(idsCaptor.getValue()));
+        }
+
+        @Test
+        @DisplayName("Should return an empty page without touching the mapper or the branch pre-fetch")
+        void shouldReturnEmptyPageWhenNoMatches() {
+            ClientFiltersParams filters = new ClientFiltersParams(null, null, null, null, null);
+            Pageable pageable = PageRequest.of(0, 12);
+
+            when(clientRepository.findAll(any(Specification.class), eq(pageable)))
+                    .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+            Page<ClientResponse> result = clientService.findAllClients(filters, pageable);
+
+            assertTrue(result.isEmpty());
+            assertEquals(0, result.getTotalElements());
+            verify(clientRepository, never()).findDistinctByIdIn(anyCollection());
             verifyNoInteractions(clientMapper);
         }
     }

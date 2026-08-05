@@ -15,6 +15,11 @@ import br.com.luizbrand.worklog.support.ClientRequestTestBuilder;
 import br.com.luizbrand.worklog.system.dto.SystemResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 
 
@@ -35,7 +40,10 @@ import java.util.List;
 import java.util.UUID;
 
 import static br.com.luizbrand.worklog.support.ClientRequestTestBuilder.aClientRequest;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -244,6 +252,88 @@ class ClientControllerTest {
                     .andExpect(jsonPath("$.length()").value(1))
                     .andExpect(jsonPath("$[0].publicId").value(clientResponse.publicId().toString()))
                     .andExpect(jsonPath("$[0].name").value(clientResponse.name()));
+
+            verify(clientService, never()).findAllClients(any(ClientFiltersParams.class), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("Should return a Page when page is present in the query string")
+        void shouldReturnPageWhenPageParamIsPresent() throws Exception {
+            when(clientService.findAllClients(any(ClientFiltersParams.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(clientResponse), PageRequest.of(1, 12), 26));
+
+            mockMvc.perform(get("/clients")
+                            .param("page", "1")
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].publicId").value(clientResponse.publicId().toString()))
+                    .andExpect(jsonPath("$.totalElements").value(26))
+                    .andExpect(jsonPath("$.totalPages").value(3))
+                    .andExpect(jsonPath("$.number").value(1))
+                    .andExpect(jsonPath("$.size").value(12));
+
+            verify(clientService, never()).findAllClients(any(ClientFiltersParams.class));
+        }
+
+        @Test
+        @DisplayName("Should return a Page when only size is present in the query string")
+        void shouldReturnPageWhenOnlySizeParamIsPresent() throws Exception {
+            when(clientService.findAllClients(any(ClientFiltersParams.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(clientResponse), PageRequest.of(0, 5), 1));
+
+            mockMvc.perform(get("/clients")
+                            .param("size", "5")
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1));
+
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+            verify(clientService).findAllClients(any(ClientFiltersParams.class), pageableCaptor.capture());
+            assertEquals(5, pageableCaptor.getValue().getPageSize());
+        }
+
+        @Test
+        @DisplayName("Should default to 12 per page sorted by name ascending")
+        void shouldApplyDefaultPageSizeAndSort() throws Exception {
+            when(clientService.findAllClients(any(ClientFiltersParams.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(clientResponse), PageRequest.of(0, 12), 1));
+
+            mockMvc.perform(get("/clients")
+                            .param("page", "0")
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
+
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+            verify(clientService).findAllClients(any(ClientFiltersParams.class), pageableCaptor.capture());
+
+            Pageable pageable = pageableCaptor.getValue();
+            assertEquals(0, pageable.getPageNumber());
+            assertEquals(12, pageable.getPageSize());
+            assertEquals(Sort.by(Sort.Direction.ASC, "name"), pageable.getSort());
+        }
+
+        @Test
+        @DisplayName("Should keep the filters when paginating")
+        void shouldPassFiltersWhenPaginating() throws Exception {
+            when(clientService.findAllClients(any(ClientFiltersParams.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(clientResponse), PageRequest.of(0, 12), 1));
+
+            mockMvc.perform(get("/clients")
+                            .param("name", "Client")
+                            .param("status", StatusFiltro.ATIVO.name())
+                            .param("tipo", ClientType.PJ.name())
+                            .param("page", "0")
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
+
+            ArgumentCaptor<ClientFiltersParams> filtersCaptor = ArgumentCaptor.forClass(ClientFiltersParams.class);
+            verify(clientService).findAllClients(filtersCaptor.capture(), any(Pageable.class));
+
+            ClientFiltersParams filters = filtersCaptor.getValue();
+            assertEquals("Client", filters.name());
+            assertEquals(StatusFiltro.ATIVO, filters.status());
+            assertEquals(ClientType.PJ, filters.tipo());
         }
     }
 

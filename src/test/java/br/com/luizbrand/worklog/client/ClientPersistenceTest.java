@@ -9,6 +9,9 @@ import org.hibernate.Hibernate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
@@ -202,5 +205,80 @@ class ClientPersistenceTest {
 
         assertThat(found).hasSize(1);
         assertThat(found.get(0).getName()).isEqualTo("Empresa Cascata LTDA");
+    }
+
+    @Test
+    @DisplayName("Should honour the page size and the name sort on the paginated query")
+    void shouldPaginateAndSortByName() {
+        persistSimpleClient("Alfa Comercio", "11111111000191");
+        persistSimpleClient("Bravo Servicos", "22222222000172");
+        persistSimpleClient("Charlie Industria", "33333333000153");
+        entityManager.clear();
+
+        Page<Client> firstPage = clientRepository.findAll(
+                ClientSpecification.findByFilter(new ClientFiltersParams(null, null, null, null, null)),
+                PageRequest.of(0, 2, Sort.by(Sort.Direction.ASC, "name")));
+
+        assertThat(firstPage.getTotalElements()).isEqualTo(3);
+        assertThat(firstPage.getTotalPages()).isEqualTo(2);
+        assertThat(firstPage.getContent()).extracting(Client::getName)
+                .containsExactly("Alfa Comercio", "Bravo Servicos");
+
+        Page<Client> lastPage = clientRepository.findAll(
+                ClientSpecification.findByFilter(new ClientFiltersParams(null, null, null, null, null)),
+                PageRequest.of(1, 2, Sort.by(Sort.Direction.ASC, "name")));
+
+        assertThat(lastPage.getContent()).extracting(Client::getName)
+                .containsExactly("Charlie Industria");
+    }
+
+    @Test
+    @DisplayName("Should initialize the branches of the page content through the id pre-fetch")
+    void shouldInitializeBranchesAfterIdPrefetch() {
+        clientRepository.saveAndFlush(buildClientWithTwoBranches());
+        entityManager.clear();
+
+        Page<Client> page = clientRepository.findAll(
+                ClientSpecification.findByFilter(new ClientFiltersParams(null, null, null, null, null)),
+                PageRequest.of(0, 12, Sort.by(Sort.Direction.ASC, "name")));
+
+        Client fromPage = page.getContent().get(0);
+        assertThat(Hibernate.isInitialized(fromPage.getBranches())).isFalse();
+
+        clientRepository.findDistinctByIdIn(page.getContent().stream().map(Client::getId).toList());
+
+        assertThat(Hibernate.isInitialized(fromPage.getBranches())).isTrue();
+        assertThat(fromPage.getBranches()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Should not inflate totalElements when the documento filter joins the branches")
+    void shouldNotInflateTotalWhenFilteringByDocumento() {
+        clientRepository.saveAndFlush(buildClientWithTwoBranches());
+        entityManager.clear();
+
+        Page<Client> page = clientRepository.findAll(
+                ClientSpecification.findByFilter(
+                        new ClientFiltersParams(null, null, null, "98.765.432/0001-88", null)),
+                PageRequest.of(0, 12, Sort.by(Sort.Direction.ASC, "name")));
+
+        assertThat(page.getTotalElements()).isEqualTo(1);
+        assertThat(page.getContent()).hasSize(1);
+    }
+
+    private void persistSimpleClient(String name, String documento) {
+        Client client = Client.builder()
+                .name(name)
+                .tipo(ClientType.PJ)
+                .regimeTributario(RegimeTributario.SIMPLES_NACIONAL)
+                .build();
+
+        client.getBranches().add(ClientBranch.builder()
+                .client(client)
+                .documento(documento)
+                .isMatriz(true)
+                .build());
+
+        clientRepository.saveAndFlush(client);
     }
 }

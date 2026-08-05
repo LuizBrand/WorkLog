@@ -393,5 +393,16 @@ changed without an update here.
 ### Test coverage track — ENCERRADA
 - [x] Resolvido em 2026-07-27: o plano de cobertura de testes foi **concluído** (8 fases, última em `07e410b`, 2026-04-21). O `.claude/test-plan.md` e o `.claude/mvp-v1-plan.md` não existem mais no repositório — eram planos locais, apagados depois de executados. A linha de índice na memória global dizia "fases 1–4 feitas, próxima é a 5", contradizendo o próprio arquivo de memória, que já registrava as 8 como completas; índice corrigido.
 
+### Paginação de `GET /clients` (entregue em 2026-08-04, aguardando commit)
+- [x] Decisão do usuário: paginação **opt-in** — sem `page`/`size` a resposta segue array (front atual não quebra); com qualquer um dos dois vira `Page`. Defaults: 12 por página, `name` ASC. Item = `ClientResponse` completo.
+- [x] `ClientRepository.findDistinctByIdIn` com `@EntityGraph("branches")` — pré-fetch em 2 etapas porque fetch join + `Pageable` faz o Hibernate paginar em memória (HHH000104)
+- [x] `ClientService.findAllClients(filters, pageable)` `@Transactional(readOnly = true)` (as 2 queries precisam da mesma sessão)
+- [x] `ClientController.findAllClients` com `@PageableDefault(size = 12, sort = "name")` + `Integer page/size` só para detectar presença; retorno `ResponseEntity<Object>`
+- [x] TDD: 3 testes de service, 4 de controller, 3 de persistência (um deles prova que as filiais chegam lazy na página e são inicializadas pelo pré-fetch)
+- [x] `./mvnw test` verde — 458/458
+- [x] `docs/api/CONTRATO-CLIENTES.md` e `docs/api/client-api.ts` atualizados (diziam "sem paginação")
+- [x] `docs/api/openapi.json` e `docs/api/api.d.ts` regerados em 2026-08-04 com a app no ar (`/clients` GET já expõe `page` e `size`)
+- [ ] Limitação conhecida do spec gerado: o 200 do `GET /clients` sai como `ClientResponse[]` — o springdoc não expressa o retorno duplo (array OU `Page`), e o param `pageable` sai como obrigatório (mesmo artefato que `/tickets` já tem). O markdown segue sendo a autoridade.
+
 ## Blocked
 - (nada bloqueado)

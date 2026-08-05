@@ -13,6 +13,8 @@ import br.com.luizbrand.worklog.system.SystemService;
 import br.com.luizbrand.worklog.exception.Conflict.ClientAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.Conflict.DocumentoAlreadyExistsException;
 import br.com.luizbrand.worklog.exception.NotFound.ClientNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,27 @@ public class ClientService {
                 .map(clientMapper::toClientResponse)
                 .toList();
 
+    }
+
+    /**
+     * Mesma listagem, em página. Roda em transação porque as duas queries — a da
+     * página e a das filiais — precisam cair na mesma sessão para que o pré-fetch
+     * sirva de fato para o mapper.
+     */
+    @Transactional(readOnly = true)
+    public Page<ClientResponse> findAllClients(ClientFiltersParams filtersParams, Pageable pageable) {
+
+        Page<Client> clients = clientRepository.findAll(ClientSpecification.findByFilter(filtersParams), pageable);
+
+        if (clients.isEmpty()) {
+            return clients.map(clientMapper::toClientResponse);
+        }
+
+        clientRepository.findDistinctByIdIn(clients.getContent().stream()
+                .map(Client::getId)
+                .toList());
+
+        return clients.map(clientMapper::toClientResponse);
     }
 
     public Optional<ClientResponse> findClientByPublicId(UUID publicId) {
