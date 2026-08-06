@@ -1,0 +1,2919 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "WorkLog API",
+        "description": "API para gerenciamento de tickets e intera\u00e7\u00f5es de suporte ao cliente. Autentica\u00e7\u00e3o via cookie HttpOnly `worklog_access` emitido pelo endpoint `POST /worklog/auth/login` (o browser anexa o cookie automaticamente em chamadas subsequentes).",
+        "contact": {
+            "name": "Luiz Brand"
+        },
+        "version": "v1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8080",
+            "description": "Generated server url"
+        }
+    ],
+    "security": [
+        {
+            "cookieAuth": []
+        }
+    ],
+    "tags": [
+        {
+            "name": "Sistemas",
+            "description": "Gerenciamento dos sistemas/produtos atendidos pelo suporte"
+        },
+        {
+            "name": "Autentica\u00e7\u00e3o",
+            "description": "Endpoints de registro, login, refresh token e logout (tokens via cookies HttpOnly)"
+        },
+        {
+            "name": "Filiais",
+            "description": "Filiais (unidades) de um cliente. A matriz nasce junto com o cliente"
+        },
+        {
+            "name": "Usu\u00e1rios",
+            "description": "Consulta e gerenciamento de usu\u00e1rios do sistema"
+        },
+        {
+            "name": "Tickets",
+            "description": "Gerenciamento de tickets de suporte \u2014 cria\u00e7\u00e3o, consulta e atualiza\u00e7\u00e3o com log de altera\u00e7\u00f5es"
+        },
+        {
+            "name": "Clientes",
+            "description": "Gerenciamento de clientes e seus sistemas associados"
+        }
+    ],
+    "paths": {
+        "/tickets/update/{ticketPublicId}": {
+            "put": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Atualizar ticket",
+                "description": "Atualiza um ticket existente. Apenas os campos enviados ser\u00e3o alterados. Todas as mudan\u00e7as s\u00e3o registradas automaticamente no log de auditoria (TicketLog).",
+                "operationId": "updateTicket",
+                "parameters": [
+                    {
+                        "name": "ticketPublicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do ticket (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TicketUpdateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ticket atualizado com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Ticket n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados de entrada inv\u00e1lidos",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TicketResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/worklog/auth/register": {
+            "post": {
+                "tags": [
+                    "Autentica\u00e7\u00e3o"
+                ],
+                "summary": "Registrar novo usu\u00e1rio",
+                "description": "Cria um novo usu\u00e1rio com a role padr\u00e3o USER. Requer autentica\u00e7\u00e3o como ADMIN. O email deve ser \u00fanico no sistema.",
+                "operationId": "register",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Usu\u00e1rio registrado com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RegisterResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados de entrada inv\u00e1lidos",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Acesso negado \u2014 requer role ADMIN",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RegisterResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Email j\u00e1 cadastrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/worklog/auth/refresh": {
+            "post": {
+                "tags": [
+                    "Autentica\u00e7\u00e3o"
+                ],
+                "summary": "Renovar access token",
+                "description": "Gera um novo access token e um novo refresh token a partir do cookie `worklog_refresh`. O refresh token anterior \u00e9 invalidado e os cookies s\u00e3o re-emitidos.",
+                "operationId": "refreshToken",
+                "parameters": [
+                    {
+                        "name": "worklog_refresh",
+                        "in": "cookie",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Token renovado com sucesso; novos cookies emitidos"
+                    },
+                    "401": {
+                        "description": "Refresh token cookie ausente, inv\u00e1lido ou expirado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/worklog/auth/logout": {
+            "post": {
+                "tags": [
+                    "Autentica\u00e7\u00e3o"
+                ],
+                "summary": "Realizar logout",
+                "description": "Invalida o refresh token (se presente) no Redis e expira os cookies de auth.",
+                "operationId": "logout",
+                "parameters": [
+                    {
+                        "name": "worklog_refresh",
+                        "in": "cookie",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Logout realizado com sucesso; cookies expirados via Set-Cookie"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/worklog/auth/login": {
+            "post": {
+                "tags": [
+                    "Autentica\u00e7\u00e3o"
+                ],
+                "summary": "Realizar login",
+                "description": "Autentica o usu\u00e1rio e emite os tokens via cookies `worklog_access` (path `/`) e `worklog_refresh` (path `/worklog/auth`). Ambos s\u00e3o HttpOnly e SameSite=Strict.",
+                "operationId": "login",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "204": {
+                        "description": "Login realizado com sucesso; cookies emitidos via Set-Cookie"
+                    },
+                    "401": {
+                        "description": "Credenciais inv\u00e1lidas"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/users/{publicId}/deactivate": {
+            "post": {
+                "tags": [
+                    "Usu\u00e1rios"
+                ],
+                "summary": "Desativar usu\u00e1rio",
+                "description": "Desativa um usu\u00e1rio (soft delete). Requer role ADMIN.",
+                "operationId": "deactiveUserByPublicId",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do usu\u00e1rio (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Usu\u00e1rio desativado com sucesso"
+                    },
+                    "404": {
+                        "description": "Usu\u00e1rio n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado"
+                    },
+                    "403": {
+                        "description": "Acesso negado \u2014 requer role ADMIN"
+                    }
+                }
+            }
+        },
+        "/users/me/change-password": {
+            "post": {
+                "tags": [
+                    "Usu\u00e1rios"
+                ],
+                "summary": "Alterar a pr\u00f3pria senha",
+                "description": "Altera a senha do usu\u00e1rio autenticado e revoga TODAS as sess\u00f5es ativas (refresh tokens) do usu\u00e1rio. Ap\u00f3s o sucesso, o cliente deve fazer login novamente.",
+                "operationId": "changeMyPassword",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangePasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "204": {
+                        "description": "Senha alterada com sucesso; todas as sess\u00f5es revogadas"
+                    },
+                    "400": {
+                        "description": "Requisi\u00e7\u00e3o inv\u00e1lida (campos obrigat\u00f3rios ausentes ou inv\u00e1lidos)",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado"
+                    },
+                    "422": {
+                        "description": "Senha atual incorreta",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/create": {
+            "post": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Criar ticket",
+                "description": "Cria um novo ticket de suporte. O cliente e o sistema devem estar ativos. O usu\u00e1rio respons\u00e1vel \u00e9 opcional.",
+                "operationId": "createTicket",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TicketRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Ticket criado com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados de entrada inv\u00e1lidos",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Cliente ou sistema inativo",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente, sistema ou usu\u00e1rio n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TicketResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/systems/": {
+            "post": {
+                "tags": [
+                    "Sistemas"
+                ],
+                "summary": "Criar sistema",
+                "description": "Cria um novo sistema. O nome deve ser \u00fanico.",
+                "operationId": "saveSystem",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SystemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Sistema criado com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SystemResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados de entrada inv\u00e1lidos",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Sistema com este nome j\u00e1 existe",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SystemResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/clients/{publicId}/branches": {
+            "get": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Listar filiais do cliente",
+                "description": "Retorna as filiais do cliente, incluindo a matriz. Sem o par\u00e2metro `status`\ndevolve ativas e inativas, igual ao `GET /clients`.\nFunciona tamb\u00e9m para clientes desativados \u2014 s\u00f3 a cria\u00e7\u00e3o exige cliente ativo.",
+                "operationId": "findBranchesByClient",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do cliente (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filtro de status: ATIVO, INATIVO ou TODOS (padr\u00e3o: TODOS)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ATIVO",
+                                "INATIVO",
+                                "TODOS"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de filiais retornada com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/BranchResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/BranchResponse"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Cadastrar filial",
+                "description": "Cadastra uma nova filial no cliente. O `documento` \u00e9 obrigat\u00f3rio e precisa ter\nchecksum v\u00e1lido para o tipo do **cliente persistido** (CPF para PF, CNPJ para PJ) \u2014\no tipo n\u00e3o \u00e9 lido do corpo.\n\n**Aten\u00e7\u00e3o ao status de erro:** documento com checksum inv\u00e1lido aqui responde\n**422**, enquanto o mesmo erro no `POST /clients` responde **400**. A diferen\u00e7a \u00e9\nintencional: no cadastro do cliente a valida\u00e7\u00e3o \u00e9 do Bean Validation (que conhece\no `tipo` enviado no corpo) e aqui \u00e9 regra de servi\u00e7o (que s\u00f3 pode consultar o tipo\nj\u00e1 persistido).\n\nRegras rejeitadas com 422: cliente inativo; cliente pessoa f\u00edsica (que tem apenas\na matriz); `isMatriz: true` (promover uma filial a matriz \u00e9 feito pelo `PATCH`);\ndocumento ausente; documento com checksum inv\u00e1lido.",
+                "operationId": "createBranch",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do cliente (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BranchRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Filial criada com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados de entrada inv\u00e1lidos",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Documento j\u00e1 cadastrado em outra filial",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Regra de neg\u00f3cio violada",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/clients/{publicId}/branches/{branchId}/deactivate": {
+            "post": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Inativar filial",
+                "description": "Inativa a filial (`enabled = false`). **N\u00e3o \u00e9 exclus\u00e3o**: o registro permanece e\ncontinua aparecendo em `GET .../branches` sem filtro, ou com `status=INATIVO`.\n\n**Consequ\u00eancia importante:** o `documento` da filial inativa **continua ocupando a\nunicidade global**. Recadastrar aquele CNPJ em outro cliente devolve 409 enquanto\nesta filial existir.\n\nA **matriz n\u00e3o pode ser inativada** (422) \u2014 promova outra filial a matriz antes.\n\nRequer perfil ADMIN.",
+                "operationId": "deactivateBranch",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do cliente (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "branchId",
+                        "in": "path",
+                        "description": "ID p\u00fablico da filial (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Filial inativada com sucesso"
+                    },
+                    "403": {
+                        "description": "Sem permiss\u00e3o (requer ADMIN)"
+                    },
+                    "404": {
+                        "description": "Cliente ou filial n\u00e3o encontrada (inclui filial de outro cliente)",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Tentativa de inativar a matriz, ou cliente inativo",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado"
+                    }
+                }
+            }
+        },
+        "/clients/{publicId}/branches/{branchId}/activate": {
+            "post": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Reativar filial",
+                "description": "Reativa uma filial inativa (`enabled = true`). Contrapartida de\n`POST .../deactivate`.\n\n**Idempotente:** reativar uma filial j\u00e1 ativa devolve 204 sem alterar nada.\n\n**N\u00e3o h\u00e1 risco de conflito de documento:** a filial inativa nunca liberou a\nunicidade global, ent\u00e3o ningu\u00e9m p\u00f4de ter tomado aquele documento no intervalo.\n\nRejeitado com 422: cliente inativo; cliente **pessoa f\u00edsica** que j\u00e1 tenha uma\nfilial ativa (ele deve ter apenas a matriz).\n\nRequer perfil ADMIN.",
+                "operationId": "activateBranch",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do cliente (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "branchId",
+                        "in": "path",
+                        "description": "ID p\u00fablico da filial (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Filial reativada com sucesso"
+                    },
+                    "403": {
+                        "description": "Sem permiss\u00e3o (requer ADMIN)"
+                    },
+                    "404": {
+                        "description": "Cliente ou filial n\u00e3o encontrada (inclui filial de outro cliente)",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Cliente inativo, ou pessoa f\u00edsica que j\u00e1 tem filial ativa",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado"
+                    }
+                }
+            }
+        },
+        "/clients/": {
+            "post": {
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Criar cliente",
+                "description": "Cria um novo cliente associado a um ou mais sistemas. O nome deve ser \u00fanico.",
+                "operationId": "saveClient",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ClientRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Cliente criado com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClientResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados de entrada inv\u00e1lidos",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Cliente com este nome j\u00e1 existe",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClientResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/systems/{publicId}": {
+            "get": {
+                "tags": [
+                    "Sistemas"
+                ],
+                "summary": "Buscar sistema por ID",
+                "description": "Retorna um sistema espec\u00edfico pelo seu publicId (UUID).",
+                "operationId": "findSystemByPublicId",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do sistema (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sistema encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SystemResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Sistema n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SystemResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Sistemas"
+                ],
+                "summary": "Atualizar sistema",
+                "description": "Atualiza parcialmente um sistema. Apenas os campos enviados ser\u00e3o alterados (PATCH).",
+                "operationId": "updateSystem",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do sistema (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SystemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sistema atualizado com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SystemResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Sistema n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados de entrada inv\u00e1lidos",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SystemResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/clients/{publicId}": {
+            "get": {
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Buscar cliente por ID",
+                "description": "Retorna um cliente espec\u00edfico pelo seu publicId (UUID).",
+                "operationId": "findClientByPublicId",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do cliente (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cliente encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClientResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClientResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Excluir cliente (soft delete)",
+                "description": "Marca o cliente como inativo (`isEnabled = false`). Restrito a ADMIN.",
+                "operationId": "softDeleteClient",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do cliente (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Cliente desativado com sucesso"
+                    },
+                    "404": {
+                        "description": "Cliente n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado"
+                    },
+                    "403": {
+                        "description": "Sem permiss\u00e3o (ADMIN obrigat\u00f3rio)"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Atualizar cliente",
+                "description": "Atualiza parcialmente um cliente. Apenas os campos enviados ser\u00e3o alterados (PATCH).",
+                "operationId": "updateClient",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do cliente (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ClientUpdateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cliente atualizado com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClientResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados de entrada inv\u00e1lidos",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ClientResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/clients/{publicId}/branches/{branchId}": {
+            "patch": {
+                "tags": [
+                    "Filiais"
+                ],
+                "summary": "Atualizar filial",
+                "description": "Atualiza parcialmente uma filial. Apenas os campos enviados s\u00e3o alterados (PATCH).\n\n**`contatos`**: ausente n\u00e3o altera nada; presente **substitui a lista inteira**.\n\n**`isMatriz: true`** promove esta filial a matriz e rebaixa a anterior na mesma\ntransa\u00e7\u00e3o. **`isMatriz: false`** sobre a matriz atual \u00e9 rejeitado com 422 \u2014 o\ncliente ficaria sem matriz; promova outra filial no lugar.\n\n**`enabled` n\u00e3o existe aqui**: inativar filial tem endpoint pr\u00f3prio\n(`POST .../deactivate`).\n\nReenviar o **pr\u00f3prio** documento sem alter\u00e1-lo \u00e9 aceito e n\u00e3o devolve 409.\n\nRejeitado com 422: cliente inativo; documento com checksum inv\u00e1lido para o tipo do\ncliente; rebaixar a matriz; promover uma filial inativa; mais de um contato\nmarcado como `principal`.",
+                "operationId": "updateBranch",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do cliente (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "branchId",
+                        "in": "path",
+                        "description": "ID p\u00fablico da filial (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BranchUpdateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Filial atualizada com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados de entrada inv\u00e1lidos",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente ou filial n\u00e3o encontrada (inclui filial de outro cliente)",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Documento j\u00e1 cadastrado em outra filial",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Regra de neg\u00f3cio violada",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{publicId}": {
+            "get": {
+                "tags": [
+                    "Usu\u00e1rios"
+                ],
+                "summary": "Buscar usu\u00e1rio por ID",
+                "description": "Retorna um usu\u00e1rio espec\u00edfico pelo seu publicId (UUID).",
+                "operationId": "findUserByPublicId",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do usu\u00e1rio (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Usu\u00e1rio encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Usu\u00e1rio n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me": {
+            "get": {
+                "tags": [
+                    "Usu\u00e1rios"
+                ],
+                "summary": "Buscar usu\u00e1rio autenticado",
+                "description": "Retorna os dados do usu\u00e1rio autenticado (a partir do token JWT).",
+                "operationId": "getMe",
+                "responses": {
+                    "200": {
+                        "description": "Dados do usu\u00e1rio autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/": {
+            "get": {
+                "tags": [
+                    "Usu\u00e1rios"
+                ],
+                "summary": "Listar todos os usu\u00e1rios",
+                "description": "Retorna todos os usu\u00e1rios cadastrados com suas roles.",
+                "operationId": "findAllUsers",
+                "responses": {
+                    "200": {
+                        "description": "Lista de usu\u00e1rios retornada com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserResponse"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Listar tickets",
+                "description": "Retorna uma p\u00e1gina de tickets (resumo) com filtros opcionais por t\u00edtulo, status, prioridade, cliente, sistema, usu\u00e1rio, faixa de datas de cria\u00e7\u00e3o e visibilidade. O par\u00e2metro `visibility` (ATIVO/INATIVO/TODOS) s\u00f3 \u00e9 honrado para usu\u00e1rios ADMIN; usu\u00e1rios comuns sempre veem apenas tickets ativos.",
+                "operationId": "findAllTickets",
+                "parameters": [
+                    {
+                        "name": "filters",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/TicketFiltersParams"
+                        }
+                    },
+                    {
+                        "name": "pageable",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/Pageable"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "P\u00e1gina de tickets",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TicketSummary"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PageTicketSummary"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{publicId}": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Buscar ticket por ID",
+                "description": "Retorna um ticket espec\u00edfico pelo seu publicId (UUID), incluindo dados do cliente, sistema e usu\u00e1rio respons\u00e1vel.",
+                "operationId": "getTicketByPublicId",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do ticket (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ticket encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TicketResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Ticket n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TicketResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Soft-delete de ticket",
+                "description": "Marca o ticket como inativo (`isEnabled = false`). Opera\u00e7\u00e3o reservada para usu\u00e1rios ADMIN. O hist\u00f3rico de auditoria \u00e9 preservado.",
+                "operationId": "deleteTicket",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do ticket (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Ticket desativado com sucesso"
+                    },
+                    "404": {
+                        "description": "Ticket n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado"
+                    },
+                    "403": {
+                        "description": "Acesso negado \u2014 requer role ADMIN"
+                    }
+                }
+            }
+        },
+        "/tickets/{publicId}/logs": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Listar logs de auditoria do ticket",
+                "description": "Retorna uma p\u00e1gina do hist\u00f3rico de altera\u00e7\u00f5es (TicketLog) do ticket informado, ordenada por data de altera\u00e7\u00e3o decrescente.",
+                "operationId": "getTicketLogs",
+                "parameters": [
+                    {
+                        "name": "publicId",
+                        "in": "path",
+                        "description": "ID p\u00fablico do ticket (UUID)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "pageable",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/Pageable"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "P\u00e1gina de logs do ticket",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TicketLogResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Ticket n\u00e3o encontrado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PageTicketLogResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/systems": {
+            "get": {
+                "tags": [
+                    "Sistemas"
+                ],
+                "summary": "Listar todos os sistemas",
+                "description": "Retorna todos os sistemas cadastrados.",
+                "operationId": "findAllSystems",
+                "responses": {
+                    "200": {
+                        "description": "Lista de sistemas retornada com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SystemResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SystemResponse"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/clients": {
+            "get": {
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Listar clientes",
+                "description": "Retorna os clientes com suporte a filtros por nome, status (ATIVO/INATIVO/TODOS), tipo, documento e sistemas associados. A pagina\u00e7\u00e3o \u00e9 opcional: sem `page` e sem `size` a resposta \u00e9 um array de `ClientResponse`; informando qualquer um dos dois, a resposta vira um `Page` (`content`, `totalElements`, `totalPages`, `number`, `size`). Padr\u00f5es da vers\u00e3o paginada: 12 itens por p\u00e1gina ordenados por `name` ascendente.",
+                "operationId": "findAllClients",
+                "parameters": [
+                    {
+                        "name": "filtersParams",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/ClientFiltersParams"
+                        }
+                    },
+                    {
+                        "name": "pageable",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/Pageable"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "\u00cdndice da p\u00e1gina (base 0). Presente = resposta paginada.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "size",
+                        "in": "query",
+                        "description": "Itens por p\u00e1gina (padr\u00e3o 12). Presente = resposta paginada.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista (ou p\u00e1gina) de clientes retornada com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ClientResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/clients/lookup": {
+            "get": {
+                "tags": [
+                    "Clientes"
+                ],
+                "summary": "Consultar CNPJ na Receita Federal",
+                "description": "Consulta o CNPJ na CNPJ\u00e1 e devolve os dados j\u00e1 no formato do formul\u00e1rio de\ncadastro, prontos para o `POST /clients`. **Nada \u00e9 persistido**: o usu\u00e1rio\nrevisa e corrige antes de salvar.\n\nO documento \u00e9 validado localmente antes da consulta \u2014 CNPJ com checksum\ninv\u00e1lido devolve 400 sem gastar requisi\u00e7\u00e3o no provedor, que limita a\n5 consultas por minuto por endere\u00e7o IP.\n\n**A inscri\u00e7\u00e3o estadual volta sempre em branco** com o provedor p\u00fablico:\nverificado contra a API real, `open.cnpja.com` n\u00e3o devolve o bloco de\ninscri\u00e7\u00f5es. Segue preenchimento manual. (A sele\u00e7\u00e3o da IE da UF do\nendere\u00e7o est\u00e1 implementada e passa a valer sozinha caso o backend seja\napontado para a API comercial, que devolve o bloco.)\n\nO regime tribut\u00e1rio s\u00f3 \u00e9 preenchido quando o provedor afirma: MEI ou\nSimples Nacional. Lucro Presumido e Lucro Real n\u00e3o existem no contrato e\nficam a cargo do usu\u00e1rio.\n\n`situacaoCadastral` e `situacaoAtiva` s\u00e3o o aviso da tela, n\u00e3o campos do\ncadastro: CNPJ suspenso, inapto ou baixado vem **preenchido do mesmo\njeito**, com `situacaoAtiva: false`, e quem decide se cadastra \u00e9 o\natendente.\n\nA inscri\u00e7\u00e3o municipal n\u00e3o existe no contrato do provedor e volta sempre\nem branco. Nenhum contato vem marcado como principal: quem escolhe \u00e9 o\nusu\u00e1rio.\n\nAs respostas bem-sucedidas ficam em cache no Redis por 24h\n(`worklog.cnpja.cache-ttl`), ent\u00e3o repetir a consulta do mesmo CNPJ n\u00e3o\nconsome o limite do provedor. Erros nunca s\u00e3o cacheados.\n",
+                "operationId": "lookupByCnpj",
+                "parameters": [
+                    {
+                        "name": "documento",
+                        "in": "query",
+                        "description": "CNPJ do estabelecimento, com ou sem m\u00e1scara",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "07526557011659"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Consulta realizada com sucesso",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CnpjLookupResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "CNPJ ausente ou inv\u00e1lido",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "N\u00e3o autenticado",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CnpjLookupResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "CNPJ n\u00e3o registrado na Receita Federal",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Limite de consultas do provedor atingido; tente novamente em instantes",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Provedor de consulta indispon\u00edvel; preencha o cadastro manualmente",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiExceptionResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "TicketUpdateRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "solution": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "PENDING",
+                            "AWAITING_CUSTOMER",
+                            "AWAITING_DEVELOPMENT",
+                            "COMPLETED",
+                            "CANCELLED"
+                        ]
+                    },
+                    "completedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "userId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": [
+                            "CRITICAL",
+                            "HIGH",
+                            "MEDIUM",
+                            "LOW"
+                        ]
+                    }
+                }
+            },
+            "ClientSummary": {
+                "type": "object",
+                "properties": {
+                    "publicId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "SystemResponse": {
+                "type": "object",
+                "properties": {
+                    "publicId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "TicketResponse": {
+                "type": "object",
+                "properties": {
+                    "publicId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "solution": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "PENDING",
+                            "AWAITING_CUSTOMER",
+                            "AWAITING_DEVELOPMENT",
+                            "COMPLETED",
+                            "CANCELLED"
+                        ]
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": [
+                            "CRITICAL",
+                            "HIGH",
+                            "MEDIUM",
+                            "LOW"
+                        ]
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "completedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "client": {
+                        "$ref": "#/components/schemas/ClientSummary"
+                    },
+                    "system": {
+                        "$ref": "#/components/schemas/SystemResponse"
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/UserSummary"
+                    }
+                }
+            },
+            "UserSummary": {
+                "type": "object",
+                "properties": {
+                    "publicId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ApiExceptionResponse": {
+                "type": "object",
+                "properties": {
+                    "mediaType": {
+                        "$ref": "#/components/schemas/MediaType"
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "status": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "error": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "path": {
+                        "type": "string"
+                    },
+                    "fieldErrors": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "MediaType": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string"
+                    },
+                    "subtype": {
+                        "type": "string"
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    },
+                    "qualityValue": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "wildcardType": {
+                        "type": "boolean"
+                    },
+                    "wildcardSubtype": {
+                        "type": "boolean"
+                    },
+                    "subtypeSuffix": {
+                        "type": "string"
+                    },
+                    "charset": {
+                        "type": "string",
+                        "example": "UTF-8"
+                    },
+                    "concrete": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "RegisterRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 2
+                    },
+                    "email": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "password": {
+                        "type": "string",
+                        "maxLength": 2147483647,
+                        "minLength": 8,
+                        "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$"
+                    }
+                }
+            },
+            "RegisterResponse": {
+                "type": "object",
+                "properties": {
+                    "publicId": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                }
+            },
+            "LoginRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ChangePasswordRequest": {
+                "type": "object",
+                "properties": {
+                    "currentPassword": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "newPassword": {
+                        "type": "string",
+                        "maxLength": 2147483647,
+                        "minLength": 8,
+                        "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$"
+                    }
+                }
+            },
+            "TicketRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "description": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "solution": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "PENDING",
+                            "AWAITING_CUSTOMER",
+                            "AWAITING_DEVELOPMENT",
+                            "COMPLETED",
+                            "CANCELLED"
+                        ]
+                    },
+                    "completedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "clientId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "systemId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "userId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": [
+                            "CRITICAL",
+                            "HIGH",
+                            "MEDIUM",
+                            "LOW"
+                        ]
+                    }
+                },
+                "required": [
+                    "clientId",
+                    "priority",
+                    "status",
+                    "systemId"
+                ]
+            },
+            "SystemRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                }
+            },
+            "AddressRequest": {
+                "type": "object",
+                "properties": {
+                    "cep": {
+                        "type": "string",
+                        "maxLength": 8,
+                        "minLength": 0
+                    },
+                    "logradouro": {
+                        "type": "string",
+                        "maxLength": 150,
+                        "minLength": 0
+                    },
+                    "numero": {
+                        "type": "string",
+                        "maxLength": 20,
+                        "minLength": 0
+                    },
+                    "complemento": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 0
+                    },
+                    "bairro": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 0
+                    },
+                    "cidade": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 0
+                    },
+                    "uf": {
+                        "type": "string",
+                        "maxLength": 2,
+                        "minLength": 0
+                    }
+                }
+            },
+            "BranchRequest": {
+                "type": "object",
+                "properties": {
+                    "documento": {
+                        "type": "string"
+                    },
+                    "isMatriz": {
+                        "type": "boolean"
+                    },
+                    "apelido": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 0
+                    },
+                    "inscricaoEstadual": {
+                        "type": "string",
+                        "maxLength": 20,
+                        "minLength": 0
+                    },
+                    "inscricaoMunicipal": {
+                        "type": "string",
+                        "maxLength": 20,
+                        "minLength": 0
+                    },
+                    "address": {
+                        "$ref": "#/components/schemas/AddressRequest"
+                    },
+                    "contatos": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ContactRequest"
+                        }
+                    }
+                }
+            },
+            "ContactRequest": {
+                "type": "object",
+                "properties": {
+                    "tipo": {
+                        "type": "string",
+                        "enum": [
+                            "EMAIL",
+                            "TELEFONE",
+                            "CELULAR",
+                            "WHATSAPP"
+                        ]
+                    },
+                    "valor": {
+                        "type": "string",
+                        "maxLength": 150,
+                        "minLength": 0
+                    },
+                    "descricao": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 0
+                    },
+                    "principal": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "tipo"
+                ]
+            },
+            "AddressResponse": {
+                "type": "object",
+                "properties": {
+                    "cep": {
+                        "type": "string"
+                    },
+                    "logradouro": {
+                        "type": "string"
+                    },
+                    "numero": {
+                        "type": "string"
+                    },
+                    "complemento": {
+                        "type": "string"
+                    },
+                    "bairro": {
+                        "type": "string"
+                    },
+                    "cidade": {
+                        "type": "string"
+                    },
+                    "uf": {
+                        "type": "string"
+                    }
+                }
+            },
+            "BranchResponse": {
+                "type": "object",
+                "properties": {
+                    "publicId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "documento": {
+                        "type": "string"
+                    },
+                    "isMatriz": {
+                        "type": "boolean"
+                    },
+                    "apelido": {
+                        "type": "string"
+                    },
+                    "inscricaoEstadual": {
+                        "type": "string"
+                    },
+                    "inscricaoMunicipal": {
+                        "type": "string"
+                    },
+                    "address": {
+                        "$ref": "#/components/schemas/AddressResponse"
+                    },
+                    "contatos": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ContactResponse"
+                        }
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ContactResponse": {
+                "type": "object",
+                "properties": {
+                    "publicId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "tipo": {
+                        "type": "string",
+                        "enum": [
+                            "EMAIL",
+                            "TELEFONE",
+                            "CELULAR",
+                            "WHATSAPP"
+                        ]
+                    },
+                    "valor": {
+                        "type": "string"
+                    },
+                    "descricao": {
+                        "type": "string"
+                    },
+                    "principal": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ClientRequest": {
+                "type": "object",
+                "properties": {
+                    "tipo": {
+                        "type": "string",
+                        "enum": [
+                            "PJ",
+                            "PF"
+                        ]
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 0
+                    },
+                    "nomeFantasia": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 0
+                    },
+                    "regimeTributario": {
+                        "type": "string",
+                        "enum": [
+                            "SIMPLES_NACIONAL",
+                            "LUCRO_PRESUMIDO",
+                            "LUCRO_REAL",
+                            "MEI",
+                            "IMUNE",
+                            "ISENTO"
+                        ]
+                    },
+                    "systemsPublicIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "branches": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BranchRequest"
+                        },
+                        "minItems": 1
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "tipo"
+                ]
+            },
+            "ClientResponse": {
+                "type": "object",
+                "properties": {
+                    "publicId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "tipo": {
+                        "type": "string",
+                        "enum": [
+                            "PJ",
+                            "PF"
+                        ]
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "nomeFantasia": {
+                        "type": "string"
+                    },
+                    "regimeTributario": {
+                        "type": "string",
+                        "enum": [
+                            "SIMPLES_NACIONAL",
+                            "LUCRO_PRESUMIDO",
+                            "LUCRO_REAL",
+                            "MEI",
+                            "IMUNE",
+                            "ISENTO"
+                        ]
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "systems": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SystemResponse"
+                        }
+                    },
+                    "branches": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BranchResponse"
+                        }
+                    }
+                }
+            },
+            "ClientUpdateRequest": {
+                "type": "object",
+                "properties": {
+                    "tipo": {
+                        "type": "string",
+                        "enum": [
+                            "PJ",
+                            "PF"
+                        ]
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 0
+                    },
+                    "nomeFantasia": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 0
+                    },
+                    "regimeTributario": {
+                        "type": "string",
+                        "enum": [
+                            "SIMPLES_NACIONAL",
+                            "LUCRO_PRESUMIDO",
+                            "LUCRO_REAL",
+                            "MEI",
+                            "IMUNE",
+                            "ISENTO"
+                        ]
+                    },
+                    "systemsPublicIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "BranchUpdateRequest": {
+                "type": "object",
+                "properties": {
+                    "documento": {
+                        "type": "string"
+                    },
+                    "isMatriz": {
+                        "type": "boolean"
+                    },
+                    "apelido": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "minLength": 0
+                    },
+                    "inscricaoEstadual": {
+                        "type": "string",
+                        "maxLength": 20,
+                        "minLength": 0
+                    },
+                    "inscricaoMunicipal": {
+                        "type": "string",
+                        "maxLength": 20,
+                        "minLength": 0
+                    },
+                    "address": {
+                        "$ref": "#/components/schemas/AddressRequest"
+                    },
+                    "contatos": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ContactRequest"
+                        }
+                    }
+                }
+            },
+            "RoleResponse": {
+                "type": "object",
+                "properties": {
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "ADMIN",
+                            "USER"
+                        ]
+                    }
+                }
+            },
+            "UserResponse": {
+                "type": "object",
+                "properties": {
+                    "publicId": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RoleResponse"
+                        },
+                        "uniqueItems": true
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    }
+                }
+            },
+            "TicketFiltersParams": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "PENDING",
+                            "AWAITING_CUSTOMER",
+                            "AWAITING_DEVELOPMENT",
+                            "COMPLETED",
+                            "CANCELLED"
+                        ]
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": [
+                            "CRITICAL",
+                            "HIGH",
+                            "MEDIUM",
+                            "LOW"
+                        ]
+                    },
+                    "clientId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "systemId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "userId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "createdFrom": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "createdTo": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "visibility": {
+                        "type": "string",
+                        "enum": [
+                            "ATIVO",
+                            "INATIVO",
+                            "TODOS"
+                        ]
+                    }
+                }
+            },
+            "Pageable": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "integer",
+                        "format": "int32",
+                        "minimum": 0
+                    },
+                    "size": {
+                        "type": "integer",
+                        "format": "int32",
+                        "minimum": 1
+                    },
+                    "sort": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "TicketSummary": {
+                "type": "object",
+                "properties": {
+                    "publicId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "PENDING",
+                            "AWAITING_CUSTOMER",
+                            "AWAITING_DEVELOPMENT",
+                            "COMPLETED",
+                            "CANCELLED"
+                        ]
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": [
+                            "CRITICAL",
+                            "HIGH",
+                            "MEDIUM",
+                            "LOW"
+                        ]
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "completedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "client": {
+                        "$ref": "#/components/schemas/ClientSummary"
+                    },
+                    "system": {
+                        "$ref": "#/components/schemas/SystemResponse"
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/UserSummary"
+                    }
+                }
+            },
+            "PageTicketSummary": {
+                "type": "object",
+                "properties": {
+                    "totalElements": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "totalPages": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "size": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "content": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TicketSummary"
+                        }
+                    },
+                    "number": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "pageable": {
+                        "$ref": "#/components/schemas/PageableObject"
+                    },
+                    "first": {
+                        "type": "boolean"
+                    },
+                    "last": {
+                        "type": "boolean"
+                    },
+                    "numberOfElements": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "sort": {
+                        "$ref": "#/components/schemas/SortObject"
+                    },
+                    "empty": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "PageableObject": {
+                "type": "object",
+                "properties": {
+                    "offset": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "paged": {
+                        "type": "boolean"
+                    },
+                    "pageNumber": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "pageSize": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "sort": {
+                        "$ref": "#/components/schemas/SortObject"
+                    },
+                    "unpaged": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "SortObject": {
+                "type": "object",
+                "properties": {
+                    "empty": {
+                        "type": "boolean"
+                    },
+                    "sorted": {
+                        "type": "boolean"
+                    },
+                    "unsorted": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "TicketLogResponse": {
+                "type": "object",
+                "properties": {
+                    "changeGroupId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "fieldChanged": {
+                        "type": "string"
+                    },
+                    "fieldType": {
+                        "type": "string",
+                        "enum": [
+                            "STRING",
+                            "INTEGER",
+                            "DECIMAL",
+                            "BOOLEAN",
+                            "DATETIME",
+                            "ENTITY_REF"
+                        ]
+                    },
+                    "oldValue": {
+                        "type": "string"
+                    },
+                    "newValue": {
+                        "type": "string"
+                    },
+                    "changeDate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/UserSummary"
+                    }
+                }
+            },
+            "PageTicketLogResponse": {
+                "type": "object",
+                "properties": {
+                    "totalElements": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "totalPages": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "size": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "content": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TicketLogResponse"
+                        }
+                    },
+                    "number": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "pageable": {
+                        "$ref": "#/components/schemas/PageableObject"
+                    },
+                    "first": {
+                        "type": "boolean"
+                    },
+                    "last": {
+                        "type": "boolean"
+                    },
+                    "numberOfElements": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "sort": {
+                        "$ref": "#/components/schemas/SortObject"
+                    },
+                    "empty": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ClientFiltersParams": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "ATIVO",
+                            "INATIVO",
+                            "TODOS"
+                        ]
+                    },
+                    "systems": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    "documento": {
+                        "type": "string"
+                    },
+                    "tipo": {
+                        "type": "string",
+                        "enum": [
+                            "PJ",
+                            "PF"
+                        ]
+                    }
+                }
+            },
+            "CnpjLookupResponse": {
+                "type": "object",
+                "properties": {
+                    "tipo": {
+                        "type": "string",
+                        "enum": [
+                            "PJ",
+                            "PF"
+                        ]
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "nomeFantasia": {
+                        "type": "string"
+                    },
+                    "regimeTributario": {
+                        "type": "string",
+                        "enum": [
+                            "SIMPLES_NACIONAL",
+                            "LUCRO_PRESUMIDO",
+                            "LUCRO_REAL",
+                            "MEI",
+                            "IMUNE",
+                            "ISENTO"
+                        ]
+                    },
+                    "situacaoCadastral": {
+                        "type": "string"
+                    },
+                    "situacaoAtiva": {
+                        "type": "boolean"
+                    },
+                    "branches": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BranchRequest"
+                        }
+                    }
+                }
+            }
+        },
+        "securitySchemes": {
+            "cookieAuth": {
+                "type": "apiKey",
+                "description": "JWT access token emitido como cookie HttpOnly ap\u00f3s login.",
+                "name": "worklog_access",
+                "in": "cookie"
+            }
+        }
+    }
+}
