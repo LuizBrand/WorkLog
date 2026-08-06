@@ -15,6 +15,9 @@ RUNBOOK-*.md
 PLANO-*.md
 FASE-*.md
 
+# Handoffs locais (não versionados)
+handoff-*.md
+
 ### STS ###
 .apt_generated
 .classpath
